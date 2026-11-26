@@ -38,5 +38,22 @@ public class FileController {
     public Response<String> presigned(@RequestParam String objectName, @RequestParam(defaultValue = "300") int expireSeconds) throws Exception {
         return Response.ok(service.presignedGet(objectName, expireSeconds));
     }
+
+    /** 本地存储模式下的文件直读（生产切 MinIO 时由预签名地址替代）。 */
+    @GetMapping("/raw")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> raw(
+            @RequestParam String objectName) throws Exception {
+        var path = service.localPath(objectName);
+        var resource = new org.springframework.core.io.FileSystemResource(path);
+        if (!resource.exists() || !resource.isReadable()) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        String contentType = java.net.URLConnection.guessContentTypeFromName(objectName);
+        if (contentType == null) contentType = "application/octet-stream";
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Type", contentType)
+                .header("Content-Disposition", "inline; filename=\"" + objectName + "\"")
+                .body(resource);
+    }
 }
 

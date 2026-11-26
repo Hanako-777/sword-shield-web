@@ -14,6 +14,8 @@
     <module>sword-shield-interaction</module>
     <module>sword-shield-file</module>
     <module>sword-shield-admin</module>
+    <module>sword-shield-ai</module>
+    <module>sword-shield-payment</module>
   </modules>
 
   <properties>
@@ -80,6 +82,17 @@
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
           <version>${spring.boot.version}</version>
+          <!-- 主 jar 保持普通 jar 供模块间依赖，可执行胖包加 -exec 后缀 -->
+          <configuration>
+            <classifier>exec</classifier>
+          </configuration>
+          <executions>
+            <execution>
+              <goals>
+                <goal>repackage</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
       </plugins>
     </pluginManagement>

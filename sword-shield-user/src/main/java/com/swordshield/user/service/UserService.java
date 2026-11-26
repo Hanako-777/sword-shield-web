@@ -3,6 +3,8 @@ package com.swordshield.user.service;
 import com.swordshield.common.JwtUtil;
 import com.swordshield.user.domain.User;
 import com.swordshield.user.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
@@ -10,6 +12,7 @@ import java.util.Map;
 
 @Service
 public class UserService {
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
     private final UserRepository repo;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -32,16 +35,25 @@ public class UserService {
         u.setStatus(1);  // 1 = 正常状态
         u.setCreatedAt(Instant.now());
         u.setUpdatedAt(Instant.now());
-        repo.save(u);
+        User saved = repo.save(u);
+        log.info("用户注册成功 userId={} username={}", saved.getId(), username);
     }
 
     public Map<String, String> login(String username, String password) {
-        User u = repo.findByUsername(username).orElseThrow(() -> 
-            new IllegalArgumentException("用户名或密码错误"));
+        User u = repo.findByUsername(username).orElseThrow(() -> {
+            log.warn("登录失败：用户不存在 username={}", username);
+            return new IllegalArgumentException("用户名或密码错误");
+        });
         if (!encoder.matches(password, u.getPasswordHash())) {
+            log.warn("登录失败：密码错误 userId={} username={}", u.getId(), username);
             throw new IllegalArgumentException("用户名或密码错误");
         }
+        if (u.getStatus() != null && u.getStatus() != 1) {
+            log.warn("登录失败：账号已禁用 userId={}", u.getId());
+            throw new IllegalArgumentException("账号已被禁用");
+        }
         String token = JwtUtil.generateToken(String.valueOf(u.getId()));
+        log.info("用户登录成功 userId={} username={}", u.getId(), username);
         return Map.of(
             "token", token,
             "userId", String.valueOf(u.getId())

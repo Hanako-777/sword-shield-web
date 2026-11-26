@@ -3,8 +3,10 @@
 data
 logs
 db
+uploads
 target
 .vscode
 *.class
 node_modules
 .DS_Store
+screenshots

@@ -2,8 +2,8 @@
   <div class="home-container">
     <section class="hero-section">
       <div class="hero-content">
-        <h1 class="hero-title">欢迎来到 Sword Shield</h1>
-        <p class="hero-subtitle">体验最新的数字安全会议和资讯</p>
+        <h1 class="hero-title">西湖论剑 · 数字安全大会</h1>
+        <p class="hero-subtitle">AI 安全 · 数据要素 · 关基保护 —— 一站式参会与内容平台</p>
       </div>
     </section>
 

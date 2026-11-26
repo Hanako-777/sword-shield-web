@@ -4,6 +4,8 @@ import com.swordshield.activity.domain.Activity;
 import com.swordshield.activity.domain.ActivityRegistration;
 import com.swordshield.activity.repository.ActivityRegistrationRepository;
 import com.swordshield.activity.repository.ActivityRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +16,7 @@ import java.util.Map;
 
 @Service
 public class ActivityService {
+    private static final Logger log = LoggerFactory.getLogger(ActivityService.class);
     private final ActivityRepository activityRepo;
     private final ActivityRegistrationRepository regRepo;
 
@@ -40,17 +43,20 @@ public class ActivityService {
     public void register(Long userId, Long activityId, String channel) {
         Activity act = detail(activityId);
         Instant now = Instant.now();
+        // 会前即可报名（预热期是大会拉新的关键窗口），仅活动结束后关闭报名
         if (act.getEndTime() != null && now.isAfter(act.getEndTime())) {
+            log.warn("报名被拒绝：活动已结束 activityId={} userId={}", activityId, userId);
             throw new IllegalArgumentException("活动已结束，无法报名");
         }
-        if (act.getStartTime() != null && now.isBefore(act.getStartTime())) {
-            throw new IllegalArgumentException("活动未开始，暂时无法报名");
+        if (act.getStatus() != null && act.getStatus() != 1) {
+            throw new IllegalArgumentException("活动暂未开放报名");
         }
-        regRepo.findByActivityIdAndUserId(activityId, userId).ifPresent(r -> { 
-            throw new IllegalArgumentException("您已报名该活动，无需重复报名"); 
+        regRepo.findByActivityIdAndUserId(activityId, userId).ifPresent(r -> {
+            throw new IllegalArgumentException("您已报名该活动，无需重复报名");
         });
         long count = regRepo.countByActivityId(activityId);
         if (act.getMaxRegistrations() != null && count >= act.getMaxRegistrations()) {
+            log.warn("报名被拒绝：名额已满 activityId={} userId={} count={}", activityId, userId, count);
             throw new IllegalArgumentException("活动报名人数已满");
         }
         ActivityRegistration reg = new ActivityRegistration();
@@ -58,7 +64,12 @@ public class ActivityService {
         reg.setUserId(userId);
         reg.setChannel(channel == null ? "web" : channel);
         reg.setRegisteredAt(Instant.now());
-        regRepo.save(reg);
+        ActivityRegistration saved = regRepo.save(reg);
+        // 同步冗余字段，列表页与统计页保持一致的报名人数
+        act.setCurrentRegistrations((int) (count + 1));
+        activityRepo.save(act);
+        log.info("活动报名成功 regId={} activityId={} userId={} channel={} total={}",
+                saved.getId(), activityId, userId, saved.getChannel(), count + 1);
     }
 
     public Map<String, Object> getStatistics(Long activityId) {
@@ -85,6 +96,17 @@ public class ActivityService {
         }
         
         return stats;
+    }
+
+    public Map<String, Long> getChannelStatistics(Long activityId) {
+        detail(activityId);
+        Map<String, Long> result = new java.util.LinkedHashMap<>();
+        for (Object[] row : regRepo.countByChannel(activityId)) {
+            String channel = row[0] == null ? "unknown" : String.valueOf(row[0]);
+            Long count = ((Number) row[1]).longValue();
+            result.merge(channel, count, Long::sum);
+        }
+        return result;
     }
 
     public java.util.List<Map<String, Object>> getAllStatistics() {

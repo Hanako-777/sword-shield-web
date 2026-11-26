@@ -40,11 +40,21 @@ spring:
           uri: lb://sword-shield-admin
           predicates:
             - Path=/api/admin/**
+        - id: ai
+          uri: lb://sword-shield-ai
+          predicates:
+            - Path=/api/ai/**
+        - id: payment
+          uri: lb://sword-shield-payment
+          predicates:
+            - Path=/api/payment/**
 management:
   endpoints:
     web:
       exposure:
         include: health,info,gateway
   endpoint:
+    gateway:
+      enabled: true
     health:
       show-details: always

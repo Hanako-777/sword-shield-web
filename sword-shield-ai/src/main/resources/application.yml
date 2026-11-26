@@ -1,0 +1,41 @@
+server:
+  port: 8107
+spring:
+  application:
+    name: sword-shield-ai
+  datasource:
+    url: jdbc:mysql://localhost:3306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: localhost:8848
+      config:
+        enabled: false
+        import-check:
+          enabled: false
+
+# 大模型配置：默认走离线规则引擎；配置 AI_API_KEY 后自动切换 OpenAI 兼容接口
+ai:
+  enabled: ${AI_ENABLED:false}
+  base-url: ${AI_BASE_URL:https://api.deepseek.com}
+  api-key: ${AI_API_KEY:}
+  model: ${AI_MODEL:deepseek-chat}
+  timeout-ms: ${AI_TIMEOUT_MS:15000}
+  activity-service-url: ${ACTIVITY_SERVICE_URL:http://localhost:8102}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always

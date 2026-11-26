@@ -51,6 +51,11 @@ public class ActivityController {
         return Response.ok(stats);
     }
 
+    @GetMapping("/statistics/channels")
+    public Response<Map<String, Long>> channelStatistics(@RequestParam("id") Long id) {
+        return Response.ok(service.getChannelStatistics(id));
+    }
+
     @GetMapping("/statistics/all")
     public Response<java.util.List<Map<String, Object>>> allStatistics() {
         java.util.List<Map<String, Object>> stats = service.getAllStatistics();

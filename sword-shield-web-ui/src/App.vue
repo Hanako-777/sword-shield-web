@@ -4,8 +4,12 @@
       <div class="header-content">
         <div class="logo" @click="$router.push('/')">
           <span class="shield-icon">🛡️</span>
-          <span class="logo-text">Sword Shield</span>
+          <div class="logo-block">
+            <span class="logo-text">西湖论剑</span>
+            <span class="logo-sub">数字安全大会</span>
+          </div>
         </div>
+        <button class="mobile-menu-btn" @click="drawer = true" aria-label="打开菜单">☰</button>
         <nav class="nav-menu">
           <router-link to="/" class="nav-link">首页</router-link>
           <router-link to="/activities" class="nav-link">活动</router-link>
@@ -13,6 +17,7 @@
           <router-link to="/exhibitors" class="nav-link">展商</router-link>
           <router-link to="/achievements" class="nav-link">成果</router-link>
           <router-link to="/materials" class="nav-link">资料</router-link>
+          <router-link to="/payment" class="nav-link">购票</router-link>
           <router-link to="/media" class="nav-link">媒体</router-link>
           <router-link to="/statistics" class="nav-link">统计</router-link>
           <router-link to="/submit" class="nav-link">投稿</router-link>
@@ -36,7 +41,7 @@
           </template>
           <template v-else>
             <el-button type="primary" size="small" @click="$router.push('/login')">登录</el-button>
-            <el-button size="small" @click="$router.push('/register')" plain>注册</el-button>
+            <el-button size="small" class="btn-register" @click="$router.push('/register')" plain>注册</el-button>
           </template>
         </div>
       </div>
@@ -44,9 +49,28 @@
     <main class="main-content">
       <router-view />
     </main>
+    <AiAssistant />
     <footer class="app-footer">
-      <p>&copy; 2025 Sword Shield. All rights reserved.</p>
+      <p>&copy; 2026 西湖论剑·数字安全大会 · 数字安全活动平台</p>
     </footer>
+
+    <el-drawer v-model="drawer" direction="ltr" size="72%" :with-header="false">
+      <div class="drawer-brand">
+        <span class="shield-icon">🛡️</span>
+        <div>
+          <div class="drawer-title">西湖论剑</div>
+          <div class="drawer-sub">数字安全大会</div>
+        </div>
+      </div>
+      <nav class="drawer-nav">
+        <router-link v-for="item in navItems" :key="item.path" :to="item.path" @click="drawer = false">
+          {{ item.label }}
+        </router-link>
+      </nav>
+      <el-button v-if="!isLoggedIn" type="primary" class="drawer-login" @click="drawer = false; $router.push('/login')">
+        登录 / 注册
+      </el-button>
+    </el-drawer>
   </div>
 </template>
 
@@ -54,9 +78,24 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Lock } from '@element-plus/icons-vue'
+import AiAssistant from './components/AiAssistant.vue'
 
 const router = useRouter()
 const route = useRoute()
+const drawer = ref(false)
+const navItems = [
+  { path: '/', label: '首页' },
+  { path: '/activities', label: '活动' },
+  { path: '/articles', label: '资讯' },
+  { path: '/exhibitors', label: '展商' },
+  { path: '/achievements', label: '成果' },
+  { path: '/materials', label: '资料' },
+  { path: '/payment', label: '购票' },
+  { path: '/media', label: '媒体' },
+  { path: '/statistics', label: '统计' },
+  { path: '/submit', label: '投稿' },
+  { path: '/checkin', label: '签到' }
+]
 const username = ref(localStorage.getItem('username') || '')
 const userAvatar = ref(localStorage.getItem('userAvatar') || '')
 const token = ref(localStorage.getItem('token') || '')
@@ -120,6 +159,7 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #000000 0%, #ff0050 50%, #00f2ea 100%);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .app-container {
@@ -163,12 +203,25 @@ body {
 }
 
 .logo-text {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
-  background: linear-gradient(135deg, #ff0050 0%, #00f2ea 50%, #ffffff 100%);
+  background: linear-gradient(135deg, #ff0050 0%, #00f2ea 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  letter-spacing: 1px;
+}
+
+.logo-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.logo-sub {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #888;
 }
 
 .nav-menu {
@@ -231,9 +284,24 @@ body {
 
 .btn-admin {
   background: linear-gradient(135deg, #ff0050 0%, #00f2ea 100%);
-  color: white;
+  color: white !important;
   border: none;
   font-weight: 500;
+}
+
+.btn-admin span {
+  color: #fff !important;
+}
+
+.mobile-menu-btn {
+  display: none;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-size: 22px;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
 }
 
 .btn-admin:hover {
@@ -245,6 +313,96 @@ body {
 .main-content {
   flex: 1;
   padding: 32px 16px;
+}
+
+.logo-text,
+.logo-sub {
+  white-space: nowrap;
+}
+
+.drawer-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px 20px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 12px;
+}
+.drawer-title {
+  font-size: 20px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ff0050, #00f2ea);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.drawer-sub {
+  font-size: 11px;
+  color: #999;
+  letter-spacing: 2px;
+}
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+}
+.drawer-nav a {
+  padding: 14px 8px;
+  color: #333;
+  text-decoration: none;
+  font-size: 15px;
+  border-radius: 8px;
+}
+.drawer-nav a:hover,
+.drawer-nav a.router-link-active {
+  background: #fff0f5;
+  color: #ff0050;
+}
+.drawer-login {
+  width: 100%;
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) {
+  .header-content {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .nav-menu {
+    display: none;
+  }
+  .mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-sub {
+    display: none;
+  }
+  .logo-text {
+    font-size: 19px;
+  }
+  .shield-icon {
+    font-size: 26px;
+  }
+  .user-actions .btn-admin,
+  .user-actions .username {
+    display: none !important;
+  }
+  /* 未登录时只保留“登录”，注册入口在登录页与抽屉菜单中 */
+  .user-actions .btn-register {
+    display: none !important;
+  }
+  .user-actions {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .logo {
+    flex-shrink: 0;
+    gap: 6px;
+  }
+  .main-content {
+    padding: 16px 10px;
+  }
 }
 
 .app-footer {

@@ -1,5 +1,9 @@
 # sword-shield-web
 
+> 本机离线演示（无需 Docker / Nacos）请直接看 [README_运行说明.md](README_运行说明.md)：
+> `scripts\setup-mysql.ps1` → `scripts\build-local.ps1` → `scripts\start-local.ps1`。
+
+
 基于 Java 17 的 Spring Boot 3.2 微服务套件，配合 Vue 3 + Vite 前端。服务通过 Spring Cloud Gateway 暴露，依赖 MySQL、Redis、MinIO，并使用 Nacos 进行注册发现（网关通过 `lb://` 路由到各服务）。
 
 ## 模块与端口

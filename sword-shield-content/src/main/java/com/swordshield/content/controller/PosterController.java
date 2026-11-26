@@ -1,8 +1,6 @@
 package com.swordshield.content.controller;
 
 import com.swordshield.common.Response;
-import com.swordshield.file.service.FileService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,9 +14,6 @@ import java.time.Instant;
 @RestController
 @RequestMapping("/api/content")
 public class PosterController {
-    @Autowired(required = false)
-    private FileService fileService;
-
     @PostMapping(value = "/poster", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public Response<String> poster(@RequestParam(name = "title") String title,
                                    @RequestParam(name = "subtitle") String subtitle) throws Exception {
@@ -174,12 +169,8 @@ public class PosterController {
         ImageIO.write(img, "png", baos);
         byte[] bytes = baos.toByteArray();
 
-        if (fileService != null) {
-            String objectName = "poster-" + Instant.now().toEpochMilli() + ".png";
-            fileService.putObject(objectName, objectName, "image/png", bytes.length, new ByteArrayInputStream(bytes), null);
-            String url = fileService.presignedGet(objectName, 600);
-            return Response.ok(url);
-        }
+        // 海报直接以 data URL 返回，避免内容服务强依赖文件服务；
+        // 如需持久化，可由前端再调用 /api/file/upload 保存。
         String dataUrl = "data:image/png;base64," + java.util.Base64.getEncoder().encodeToString(bytes);
         return Response.ok(dataUrl);
     }
