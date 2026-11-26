@@ -4,7 +4,7 @@
       <el-col :span="6">
         <div class="stat-card stat-card-1">
           <div class="stat-icon">
-            <el-icon :size="40"><Calendar /></el-icon>
+            <Icon name="calendar" :size="36" />
           </div>
           <div class="stat-content">
             <div class="stat-label">总活动数</div>
@@ -16,7 +16,7 @@
       <el-col :span="6">
         <div class="stat-card stat-card-2">
           <div class="stat-icon">
-            <el-icon :size="40"><SuccessFilled /></el-icon>
+            <Icon name="check-circle" :size="36" />
           </div>
           <div class="stat-content">
             <div class="stat-label">进行中</div>
@@ -28,7 +28,7 @@
       <el-col :span="6">
         <div class="stat-card stat-card-3">
           <div class="stat-icon">
-            <el-icon :size="40"><User /></el-icon>
+            <Icon name="user" :size="36" />
           </div>
           <div class="stat-content">
             <div class="stat-label">总报名数</div>
@@ -40,7 +40,7 @@
       <el-col :span="6">
         <div class="stat-card stat-card-4">
           <div class="stat-icon">
-            <el-icon :size="40"><TrendCharts /></el-icon>
+            <Icon name="trending-up" :size="36" />
           </div>
           <div class="stat-content">
             <div class="stat-label">总热度</div>
@@ -53,7 +53,7 @@
     <el-row :gutter="24" class="stats-row">
       <el-col :span="8">
         <div class="stat-card stat-card-4">
-          <div class="stat-icon"><el-icon :size="26"><Money /></el-icon></div>
+          <div class="stat-icon"><Icon name="wallet" :size="26" /></div>
           <div class="stat-content">
             <div class="stat-label">支付收入（元）</div>
             <div class="stat-value">{{ payment.revenue }}</div>
@@ -62,7 +62,7 @@
       </el-col>
       <el-col :span="8">
         <div class="stat-card stat-card-3">
-          <div class="stat-icon"><el-icon :size="26"><ShoppingCart /></el-icon></div>
+          <div class="stat-icon"><Icon name="shopping-cart" :size="26" /></div>
           <div class="stat-content">
             <div class="stat-label">已支付订单</div>
             <div class="stat-value">{{ payment.paidOrders }}</div>
@@ -71,7 +71,7 @@
       </el-col>
       <el-col :span="8">
         <div class="stat-card stat-card-1">
-          <div class="stat-icon"><el-icon :size="26"><TrendCharts /></el-icon></div>
+          <div class="stat-icon"><Icon name="trending-up" :size="26" /></div>
           <div class="stat-content">
             <div class="stat-label">支付转化率</div>
             <div class="stat-value">{{ payment.conversionRate }}%</div>
@@ -87,16 +87,25 @@
         </div>
       </template>
       <div class="welcome-content">
-        <p class="welcome-text">这里是西湖论剑后台管理系统。您可以通过左侧菜单管理活动信息。</p>
-        <el-button
-          type="primary"
-          size="large"
-          @click="$router.push('/admin/dashboard/activities')"
-          class="action-btn"
-        >
-          <el-icon><Calendar /></el-icon>
-          开始管理活动
-        </el-button>
+        <p class="welcome-text">这里是西湖论剑后台管理系统。您可以通过左侧菜单管理活动、资讯与系统日志。</p>
+        <div class="action-group">
+          <el-button
+            type="primary"
+            size="large"
+            @click="$router.push('/admin/dashboard/activities')"
+            class="action-btn"
+          >
+            <Icon name="calendar" :size="16" style="margin-right: 6px" />
+            开始管理活动
+          </el-button>
+          <el-button
+            size="large"
+            @click="$router.push('/admin/dashboard/logs')"
+          >
+            <Icon name="ticket" :size="16" style="margin-right: 6px" />
+            查看系统日志
+          </el-button>
+        </div>
       </div>
     </el-card>
   </div>
@@ -113,7 +122,7 @@
  */
 import { ref, onMounted } from 'vue'
 import adminApi from '../../adminApi'
-import { Calendar, SuccessFilled, User, TrendCharts, Money, ShoppingCart } from '@element-plus/icons-vue'
+import Icon from '../../components/ui/Icon.vue'
 
 const adminUsername = ref(localStorage.getItem('adminUsername') || '')
 const adminNickname = ref(localStorage.getItem('adminNickname') || '')
@@ -282,6 +291,12 @@ onMounted(() => {
   line-height: 1.7;
   font-size: 14px;
   flex: 1;
+}
+
+.action-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .action-btn {

@@ -2,9 +2,8 @@
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-header">
-        <div class="auth-tag">注册账号</div>
-        <h1 class="auth-title">加入 西湖论剑 平台</h1>
-        <p class="auth-subtitle">创建账号以报名活动、下载大会资料并参与互动。</p>
+        <h1 class="auth-title">注册账号</h1>
+        <p class="auth-subtitle">创建西湖论剑账号以报名活动、下载大会资料并参与互动。</p>
       </div>
       <el-form :model="form" @submit.prevent="register" class="auth-form">
         <el-form-item>
@@ -110,46 +109,33 @@ async function register() {
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
-  background: radial-gradient(circle at top, #e3eeff 0, #f3f6fb 45%, #eef2f7 100%);
+  background: #f6f8fa;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 440px;
   padding: 32px 32px 28px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
-  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d8e0e5;
+  box-shadow: 0 4px 16px rgba(11, 37, 69, 0.06);
 }
 
 .auth-header {
-  margin-bottom: 28px;
-}
-
-.auth-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #0f766e;
-  background: rgba(209, 250, 229, 0.9);
+  margin-bottom: 24px;
 }
 
 .auth-title {
-  margin-top: 14px;
   font-size: 22px;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: #0b2545;
 }
 
 .auth-subtitle {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 13px;
-  color: #6b7280;
+  color: #506273;
 }
 
 .auth-form {
@@ -158,16 +144,21 @@ async function register() {
 
 .auth-button {
   width: 100%;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 40%, #0f172a 100%);
-  border: none;
+  background: #0b2545;
+  border-color: #0b2545;
   font-size: 15px;
   font-weight: 600;
+}
+
+.auth-button:hover {
+  background: #183a63;
+  border-color: #183a63;
 }
 
 .auth-footer {
   text-align: center;
   margin-top: 8px;
-  color: #6b7280;
+  color: #506273;
   font-size: 13px;
 }
 </style>

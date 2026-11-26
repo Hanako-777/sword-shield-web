@@ -1,26 +1,23 @@
 <template>
   <div class="media-page">
     <div class="page-header">
-      <h1 class="page-title">
-        <el-icon class="title-icon"><Film /></el-icon>
-        大会精彩瞬间
-      </h1>
-      <p class="page-subtitle">浏览我们的图片和视频花絮</p>
+      <h1 class="page-title">媒体中心</h1>
+      <p class="page-subtitle">大会现场图片与视频花絮</p>
     </div>
 
     <!-- Filter Tabs -->
     <el-card class="filter-card">
       <el-radio-group v-model="filterType" @change="loadMedia(1)" size="large">
         <el-radio-button label="">
-          <el-icon class="tab-icon"><Grid /></el-icon>
+          <Icon name="grid" :size="15" class="tab-icon" />
           全部
         </el-radio-button>
         <el-radio-button label="image">
-          <el-icon class="tab-icon"><Picture /></el-icon>
+          <Icon name="image" :size="15" class="tab-icon" />
           图片
         </el-radio-button>
         <el-radio-button label="video">
-          <el-icon class="tab-icon"><VideoCamera /></el-icon>
+          <Icon name="video" :size="15" class="tab-icon" />
           视频
         </el-radio-button>
       </el-radio-group>
@@ -29,7 +26,7 @@
     <!-- Media Grid -->
     <div class="media-grid" v-loading="loading">
       <div v-if="items.length === 0" class="empty-state">
-        <el-icon class="empty-icon"><Camera /></el-icon>
+        <Icon name="camera" :size="48" class="empty-icon" />
         <p>暂无媒体内容</p>
       </div>
       
@@ -43,16 +40,16 @@
         <div class="media-thumbnail">
           <div v-if="item.type === 'image'" class="thumbnail-image">
             <img v-if="getThumbSrc(item)" :src="getThumbSrc(item)" class="thumbnail-cover" alt="缩略图" />
-            <el-icon v-else class="media-icon"><Picture /></el-icon>
+            <Icon v-else name="image" :size="40" class="media-icon" />
             <div class="media-type-badge image-badge">
-              <el-icon class="badge-icon"><Picture /></el-icon>
+              <Icon name="image" :size="13" class="badge-icon" />
               图片
             </div>
           </div>
           <div v-else class="thumbnail-video">
-            <el-icon class="media-icon"><VideoPlay /></el-icon>
+            <Icon name="play-circle" :size="40" class="media-icon" />
             <div class="media-type-badge video-badge">
-              <el-icon class="badge-icon"><VideoCamera /></el-icon>
+              <Icon name="video" :size="13" class="badge-icon" />
               视频
             </div>
           </div>
@@ -62,7 +59,7 @@
           <p class="media-summary" v-if="item.summary">{{ item.summary }}</p>
           <div class="media-footer">
             <span class="media-date">
-              <el-icon class="date-icon"><Calendar /></el-icon>
+              <Icon name="calendar" :size="14" class="date-icon" />
               {{ formatDate(item.createdAt) }}
             </span>
           </div>
@@ -126,7 +123,7 @@
  */
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Calendar, Camera, Film, Grid, Picture, VideoCamera, VideoPlay } from '@element-plus/icons-vue'
+import Icon from '../components/ui/Icon.vue'
 import api from '../api'
 
 const items = ref<any[]>([])
@@ -244,31 +241,21 @@ onMounted(() => {
 
 <style scoped>
 .media-page {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
 .page-header {
-  text-align: center;
-  margin-bottom: 32px;
+  padding: 8px 0 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #d8e0e5;
 }
 
 .page-title {
-  font-size: 42px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.title-icon {
-  color: #2563eb;
-  -webkit-text-fill-color: initial;
+  font-size: 26px;
+  font-weight: 700;
+  color: #0b2545;
+  margin-bottom: 6px;
 }
 
 .tab-icon {
@@ -276,20 +263,20 @@ onMounted(() => {
 }
 
 .page-subtitle {
-  font-size: 16px;
-  color: #666;
+  font-size: 14px;
+  color: #506273;
 }
 
 .filter-card {
-  margin-bottom: 24px;
-  text-align: center;
-  border-radius: 12px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
 }
 
 .media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  gap: 20px;
   margin-bottom: 32px;
   min-height: 300px;
 }
@@ -298,24 +285,25 @@ onMounted(() => {
   grid-column: 1 / -1;
   text-align: center;
   padding: 80px 20px;
-  color: #999;
+  color: #94a3b8;
 }
 
 .empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  font-size: 48px;
+  margin-bottom: 12px;
 }
 
 .media-card {
-  border-radius: 12px;
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .media-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  border-color: #94a3b8;
+  box-shadow: 0 6px 18px rgba(11, 37, 69, 0.08);
 }
 
 .media-thumbnail {
@@ -327,7 +315,7 @@ onMounted(() => {
 .thumbnail-image {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+  background: #eef2f6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -342,25 +330,29 @@ onMounted(() => {
 .thumbnail-video {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  background: #0b2545;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .media-icon {
-  font-size: 64px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 52px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.thumbnail-image .media-icon {
+  color: #94a3b8;
 }
 
 .media-type-badge {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 6px 12px;
-  border-radius: 20px;
+  top: 10px;
+  right: 10px;
+  padding: 3px 9px;
+  border-radius: 4px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: white;
   display: inline-flex;
   align-items: center;
@@ -371,11 +363,11 @@ onMounted(() => {
 }
 
 .image-badge {
-  background: rgba(67, 160, 71, 0.9);
+  background: rgba(11, 37, 69, 0.78);
 }
 
 .video-badge {
-  background: rgba(229, 57, 53, 0.9);
+  background: rgba(15, 118, 110, 0.88);
 }
 
 .media-info {

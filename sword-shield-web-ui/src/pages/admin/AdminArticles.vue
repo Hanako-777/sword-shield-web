@@ -30,7 +30,7 @@
         </div>
       </div>
       <el-button type="primary" @click="showCreateDialog">
-        <el-icon><Plus /></el-icon>
+        <Icon name="plus" :size="15" style="margin-right: 4px" />
         新建资讯
       </el-button>
     </div>
@@ -151,7 +151,7 @@
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import Icon from '../../components/ui/Icon.vue'
 import adminApi from '../../adminApi'
 
 type Article = {

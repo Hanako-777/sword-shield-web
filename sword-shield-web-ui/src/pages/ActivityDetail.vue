@@ -1,148 +1,62 @@
 <template>
-  <div class="detail-container">
-    <el-card v-if="item" class="detail-card">
-      <div class="detail-header">
-        <div class="cover-section" v-if="item.coverUrl">
-          <img :src="item.coverUrl" :alt="item.title" />
+  <div class="activity-page" :style="{ backgroundColor: tint }">
+    <ReadState v-if="loading || !item" class="initial-state" :loading="loading" :error="error" empty="暂无活动" @retry="load" />
+    <div v-else class="layout">
+      <aside class="identity">
+        <ActivityCover :src="item.coverUrl" :title="item.title" @tint="tint = $event" />
+        <div class="identity-info">
+          <div v-if="item.speaker" class="speaker"><Icon name="user" :size="18" /><div><small>嘉宾</small><strong>{{ item.speaker }}</strong></div></div>
+          <div class="tags"><span class="ss-badge">活动</span><span v-if="item.heat != null" class="ss-badge">热度 {{ item.heat }}</span></div>
         </div>
-        <h1 class="detail-title">{{ item.title }}</h1>
-        <div class="detail-meta">
-          <div class="meta-tag">
-            <el-icon class="icon"><Location /></el-icon>
-            <span>{{ item.location || '地点待定' }}</span>
+      </aside>
+      <div class="details">
+        <header class="details-head">
+          <h1>{{ item.title }}</h1>
+          <div class="fact">
+            <div class="ss-date-block" aria-hidden="true"><small>{{ startDate ? startDate.getMonth() + 1 + '月' : '—' }}</small><b>{{ startDate?.getDate() || '—' }}</b></div>
+            <div><strong>{{ startDate ? startDate.toLocaleDateString('zh-CN', {year:'numeric',month:'long',day:'numeric',weekday:'long'}) : '待定' }}</strong>
+              <p>开始 {{ timeOf(startMs) }} <span aria-hidden="true">—</span> 结束 {{ endLabel }}</p></div>
           </div>
-          <div class="meta-tag">
-            <el-icon class="icon"><Calendar /></el-icon>
-            <span>开始 {{ formatDate(item.startTime) || '待定' }}</span>
+          <div class="fact"><span class="fact-icon"><Icon name="map-pin" :size="18" /></span><strong>{{ item.location || '地点待定' }}</strong></div>
+        </header>
+        <section v-reveal class="registration reveal">
+          <div class="section-title"><h2>活动报名</h2><span class="ss-badge"><i class="ss-dot" :class="{ 'ss-dot--live': phase === '进行中' }" />{{ phase }}</span></div>
+          <div v-if="item.maxRegistrations != null || item.currentRegistrations != null" class="capacity">
+            <span v-if="item.maxRegistrations != null">限额 <b>{{ item.maxRegistrations }}</b> 人</span>
+            <span v-if="item.currentRegistrations != null">已报名 <b>{{ item.currentRegistrations }}</b> 人</span>
+            <span v-if="remaining != null">余量 <b>{{ remaining }}</b></span>
           </div>
-          <div class="meta-tag">
-            <el-icon class="icon"><Clock /></el-icon>
-            <span>结束 {{ formatDate(item.endTime) || '待定' }}</span>
-          </div>
-          <div class="meta-tag" v-if="item.maxRegistrations">
-            <el-icon class="icon"><UserFilled /></el-icon>
-            <span>限额 {{ item.maxRegistrations }} 人</span>
-          </div>
-        </div>
-      </div>
-
-      <el-divider />
-
-      <div class="detail-content">
-        <p class="summary">{{ item.summary }}</p>
-        <div class="action-section">
-          <el-button type="primary" size="large" @click="register" :loading="registering" :disabled="!canRegister || registered">
-            <span v-if="registered">
-              <el-icon class="btn-icon"><CircleCheck /></el-icon>
-              已报名
-            </span>
-            <span v-else>
-              <el-icon class="btn-icon"><Tickets /></el-icon>
-              立即报名
-            </span>
+          <el-button class="primary-action" type="primary" @click="register" :loading="registering" :disabled="!canRegister || registered">
+            {{ registered ? '已报名' : '立即报名' }}
           </el-button>
-          <el-button
-            type="success"
-            size="large"
-            @click="activityCheckin"
-            :loading="checkingIn"
-            :disabled="!canCheckin || checkedIn"
-            style="margin-left: 12px;"
-          >
-            <span v-if="checkedIn">
-              <el-icon class="btn-icon"><CircleCheck /></el-icon>
-              已签到
-            </span>
-            <span v-else>
-              <el-icon class="btn-icon"><DocumentChecked /></el-icon>
-              活动签到
-            </span>
-          </el-button>
-          <el-button size="large" @click="share" :loading="sharing" style="margin-left: 12px;">
-            <span>
-              <el-icon class="btn-icon"><Share /></el-icon>
-              分享活动
-            </span>
-          </el-button>
-          <div v-if="registerHint || checkinHint" class="checkin-hint">
-            <div v-if="registerHint">{{ registerHint }}</div>
-            <div v-if="checkinHint">{{ checkinHint }}</div>
+          <div class="other-actions">
+            <el-button @click="activityCheckin" :loading="checkingIn" :disabled="!canCheckin || checkedIn">{{ checkedIn ? '已签到' : '活动签到' }}</el-button>
+            <router-link to="/payment" class="touch-link buy-link">购票</router-link>
+            <el-button @click="share" :loading="sharing"><Icon name="share" :size="15" style="margin-right: 4px" />分享活动</el-button>
           </div>
-        </div>
-      </div>
-
-      <!-- Live & Replay Links Section -->
-      <div v-if="item.liveUrl || item.replayUrl" class="media-links-section">
-        <el-divider />
-        <h3 class="section-heading">
-          <el-icon class="heading-icon"><VideoPlay /></el-icon>
-          直播与回放
-        </h3>
-        <div class="media-links">
-          <div
-            v-if="item.liveUrl"
-            class="media-card live-card"
-            :class="{ disabled: !liveEnabled }"
-            @click="enterLive(item.liveUrl)"
-          >
-            <div class="media-card-bg"></div>
-            <div class="media-card-content">
-              <div class="media-icon-wrapper live-icon-wrapper">
-                <el-icon class="media-icon"><VideoCameraFilled /></el-icon>
-              </div>
-              <div class="media-info">
-                <h4>直播中</h4>
-                <p>点击进入直播间观看精彩内容</p>
-              </div>
-              <div class="media-action">
-                <span class="action-text">进入直播</span>
-                <el-icon class="action-arrow"><ArrowRight /></el-icon>
-              </div>
-            </div>
-            <div v-if="liveEnabled" class="live-indicator">
-              <span class="live-dot"></span>
-              <span>LIVE</span>
-            </div>
+          <div v-if="registerHint || checkinHint" class="hints"><p v-if="registerHint">{{ registerHint }}</p><p v-if="checkinHint">{{ checkinHint }}</p></div>
+          <div v-if="item.liveUrl || item.replayUrl" class="broadcast">
+            <h3>直播与回放</h3>
+            <button v-if="item.liveUrl" type="button" :disabled="!liveEnabled" @click="enterLive(item.liveUrl)">
+              <Icon name="video" :size="18" /><span><b>{{ liveEnabled ? '直播中' : '进入直播' }}</b><small>点击进入直播间观看精彩内容</small></span>
+              <strong>{{ liveEnabled ? 'LIVE · 进入直播' : '进入直播' }}</strong>
+            </button>
+            <button v-if="item.replayUrl" type="button" :disabled="!replayEnabled" @click="enterReplay(item.replayUrl)">
+              <Icon name="play-circle" :size="18" /><span><b>视频回放</b><small>观看往期精彩录播内容</small></span><strong>观看回放</strong>
+            </button>
           </div>
-          
-          <div
-            v-if="item.replayUrl"
-            class="media-card replay-card"
-            :class="{ disabled: !replayEnabled }"
-            @click="enterReplay(item.replayUrl)"
-          >
-            <div class="media-card-bg"></div>
-            <div class="media-card-content">
-              <div class="media-icon-wrapper replay-icon-wrapper">
-                <el-icon class="media-icon"><VideoPlay /></el-icon>
-              </div>
-              <div class="media-info">
-                <h4>视频回放</h4>
-                <p>观看往期精彩录播内容</p>
-              </div>
-              <div class="media-action">
-                <span class="action-text">观看回放</span>
-                <el-icon class="action-arrow"><ArrowRight /></el-icon>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <el-divider />
-
-      <div class="interaction-section">
+        </section>
+        <section v-if="item.summary" v-reveal class="prose reveal"><h2>活动详情</h2><p>{{ item.summary }}</p></section>
+        <ReadState v-if="error" :error="error" @retry="load" />
+      <section v-reveal class="interaction-section reveal">
         <div class="section-title">
           <h3>
-            <el-icon class="heading-icon"><ChatDotRound /></el-icon>
+            <Icon name="message-circle" :size="18" class="heading-icon" />
             评论区
           </h3>
           <el-button size="small" @click="like" :loading="liking" :type="liked ? 'primary' : ''">
             <span>
-              <el-icon class="inline-icon">
-                <StarFilled v-if="liked" />
-                <Star v-else />
-              </el-icon>
+              <Icon name="star" :size="14" :filled="liked" class="inline-icon" />
               {{ liked ? '已点赞' : '点赞' }} {{ likeCount }}
             </span>
           </el-button>
@@ -169,23 +83,21 @@
         </div>
 
         <div class="comments-list">
-          <div v-if="comments.length === 0" class="empty-comments">
+          <ReadState v-if="commentsLoading || commentsError" :loading="commentsLoading" :error="commentsError" @retry="loadComments" />
+          <div v-else-if="comments.length === 0" class="empty-comments">
             <el-empty description="还没有评论，快来发表第一条吧！" :image-size="96">
               <el-button type="primary" @click="focusCommentBox">去评论</el-button>
             </el-empty>
           </div>
           <div v-for="c in comments" :key="c.id" class="comment-item">
             <div class="comment-avatar">
-              <el-icon><Avatar /></el-icon>
+              <Icon name="user-circle" :size="20" />
             </div>
             <div class="comment-content">
               <div class="comment-text">{{ c.content }}</div>
               <div class="comment-actions">
                 <el-button size="small" @click="likeComment(c)" :loading="c._liking" :type="c.isLiked ? 'primary' : ''">
-                  <el-icon class="inline-icon">
-                    <StarFilled v-if="c.isLiked" />
-                    <Star v-else />
-                  </el-icon>
+                  <Icon name="star" :size="14" :filled="!!c.isLiked" class="inline-icon" />
                   {{ c.isLiked ? '已点赞' : '点赞' }} {{ c.likeCount ?? 0 }}
                 </el-button>
               </div>
@@ -193,8 +105,16 @@
             </div>
           </div>
         </div>
+      </section>
       </div>
-    </el-card>
+      <nav class="mobile-action" aria-label="活动操作">
+        <el-button v-if="canRegister && !registered" type="primary" :loading="registering" @click="register">立即报名</el-button>
+        <el-button v-else-if="canCheckin && !checkedIn" type="primary" :loading="checkingIn" @click="activityCheckin">活动签到</el-button>
+        <el-button v-else-if="liveEnabled" type="primary" @click="enterLive(item.liveUrl)">进入直播</el-button>
+        <el-button v-else-if="replayEnabled" type="primary" @click="enterReplay(item.replayUrl)">观看回放</el-button>
+        <router-link v-else to="/payment" class="touch-link dock-buy">购票</router-link>
+      </nav>
+    </div>
   </div>
 </template>
 
@@ -217,6 +137,21 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import { ElMessage } from 'element-plus'
 
+import ReadState from '../components/detail/ReadState.vue'
+import { useReadState } from '../components/detail/useReadState'
+import { vReveal } from '../directives/reveal'
+import ActivityCover from '../components/detail/ActivityCover.vue'
+import Icon from '../components/ui/Icon.vue'
+
+const { loading, error, run: readPage } = useReadState()
+const { loading: commentsLoading, error: commentsError, run: readComments } = useReadState()
+function load() {
+  return readPage(fetchDetail, '加载失败，请稍后重试')
+}
+function loadComments() {
+  return readComments(fetchComments, '评论加载失败')
+}
+const tint = ref('#F4F6F8')
 const route = useRoute()
 const router = useRouter()
 const item = ref<any>(null)
@@ -267,6 +202,26 @@ const replayEnabled = computed(() => {
   return nowMs.value >= endMs.value
 })
 
+const startDate = computed(() => startMs.value == null ? null : new Date(startMs.value))
+function timeOf(ms: number | null) {
+  return ms == null ? '待定' : new Date(ms).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+const endLabel = computed(() => {
+  if (endMs.value == null) return '待定'
+  const date = new Date(endMs.value)
+  return date.toDateString() === startDate.value?.toDateString()
+    ? timeOf(endMs.value) : date.toLocaleDateString('zh-CN') + ' ' + timeOf(endMs.value)
+})
+const remaining = computed(() => {
+  const { maxRegistrations, currentRegistrations } = item.value || {}
+  return maxRegistrations == null || currentRegistrations == null ? null : Math.max(0, maxRegistrations - currentRegistrations)
+})
+const phase = computed(() => {
+  if (endMs.value != null && nowMs.value >= endMs.value) return '已结束'
+  if (startMs.value == null) return '待定'
+  return nowMs.value < startMs.value ? '未开始' : '进行中'
+})
+
 function formatDate(dateStr: string) {
   if (!dateStr) return ''
   const date = new Date(dateStr)
@@ -296,15 +251,15 @@ function enterReplay(url: string) {
   router.push(`/activity/${route.params.id}/live?mode=replay`)
 }
 
-async function load() {
+async function fetchDetail() {
   const { data } = await api.get('/activity/detail', { params: { id: route.params.id } })
-  if (data.code === 0) {
-    item.value = data.data
-    computeRegisterWindow()
-    computeCheckinWindow()
-    await loadRegistrationStatus()
-    await loadCheckinStatus()
-  }
+  if (data.code !== 0) throw new Error(data.message || '活动加载失败')
+  if (!data.data) { item.value = null; return }
+  item.value = data.data
+  computeRegisterWindow()
+  computeCheckinWindow()
+  await loadRegistrationStatus()
+  await loadCheckinStatus()
 
   const targetId = Number(route.params.id)
   if (!Number.isFinite(targetId)) return
@@ -419,6 +374,7 @@ async function register() {
     })
     if (data.code === 0) {
       registered.value = true
+      if (typeof item.value?.currentRegistrations === 'number') item.value.currentRegistrations++
       ElMessage.success('报名成功！')
     } else {
       if (typeof data.message === 'string' && data.message.includes('已报名')) {
@@ -462,7 +418,7 @@ async function activityCheckin() {
   }
 }
 
-async function loadComments() {
+async function fetchComments() {
   const { data } = await api.get('/interaction/comments', { 
     params: { 
       targetType: 'activity', 
@@ -471,6 +427,7 @@ async function loadComments() {
       size: 10 
     } 
   })
+  if (data.code !== 0) throw new Error(data.message || '评论加载失败')
   if (data.code === 0) {
     comments.value = data.data.items
     const token = localStorage.getItem('token')
@@ -634,9 +591,9 @@ async function likeComment(c: any) {
   }
 }
 
-onMounted(async () => {
-  await load()
-  await loadComments()
+onMounted(() => {
+  load()
+  loadComments()
   nowTimer = window.setInterval(() => {
     nowMs.value = Date.now()
     // 报名/签到按钮也依赖时间窗，顺带刷新
@@ -653,347 +610,65 @@ onBeforeUnmount(() => {
 })
 </script>
 
+<style scoped src="../components/detail/detail.css"></style>
 <style scoped>
-.detail-container {
-  max-width: 800px;
-  margin: 0 auto;
+.activity-page { margin: -24px -16px -40px; padding: 48px 24px 80px; min-height: 72vh; font-family: var(--ss-font); color: var(--ss-ink); }
+.layout { max-width: 1040px; margin: auto; display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.3fr); gap: 64px; align-items: start; }
+.identity { position: sticky; top: calc(var(--ss-header-h) + 20px); }
+.identity-info { display: grid; gap: 16px; padding: 20px 4px; }
+.speaker, .tags, .fact, .section-title, .capacity, .other-actions, .comment-item { display: flex; align-items: center; gap: 12px; }
+.speaker small, .fact p, .hints, .comment-time, .broadcast small { display: block; color: var(--ss-muted); font-size: 14px; }
+.speaker strong { font-weight: 550; overflow-wrap: anywhere; }
+.details { min-width: 0; }
+h1 { color: var(--ss-navy); font-size: 40px; font-weight: 600; letter-spacing: -.02em; line-height: 1.22; margin-bottom: 24px; }
+h2, .section-title h3 { color: var(--ss-navy); font-size: 22px; font-weight: 600; }
+.fact { margin-top: 14px; }
+.fact strong { font-size: 16px; font-weight: 600; }
+.fact-icon, .ss-date-block { flex: 0 0 46px; }
+.fact-icon { height: 46px; border: 1px solid var(--ss-line-strong); border-radius: 12px; display: grid; place-items: center; background: #fff; }
+.ss-date-block small { width: 100%; background: var(--ss-fill); text-align: center; font-size: 11px; }
+.ss-date-block b { font-size: 20px; }
+.registration { margin: 28px 0; padding: 24px; border: 1px solid var(--ss-line-strong); background: #fff; border-radius: 24px; }
+.section-title { justify-content: space-between; }
+.capacity { flex-wrap: wrap; gap: 6px 22px; margin-top: 14px; color: var(--ss-muted); font-size: 14px; }
+.capacity b { color: var(--ss-navy); }
+.primary-action { width: 100%; min-height: 46px; margin-top: 20px; }
+.other-actions { flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.other-actions .el-button { margin: 0; }
+.buy-link, .dock-buy { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 18px; background: var(--ss-fill); border-radius: 10px; color: var(--ss-navy); font-weight: 600; }
+.hints { font-size: 13px; line-height: 1.7; }
+.broadcast { border-top: 1px solid var(--ss-line); margin-top: 18px; padding-top: 14px; }
+.broadcast h3 { font-size: 16px; }
+.broadcast button { display: flex; align-items: center; gap: 10px; text-align: left; width: 100%; border: 0; background: none; padding: 12px 0; color: var(--ss-navy); cursor: pointer; }
+.broadcast button:disabled { color: var(--ss-muted); cursor: default; }
+.broadcast strong { margin-left: auto; font-size: 13px; }
+.broadcast small { font-size: 12px; }
+.prose, .interaction-section { margin-top: 32px; }
+.prose p, .comment-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.prose p { margin-top: 12px; font-size: 17px; line-height: 1.8; }
+.interaction-section .section-title { margin-bottom: 16px; }
+.comment-item { align-items: start; border-top: 1px solid var(--ss-line-strong); padding: 18px 0; }
+.comment-avatar { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: #fff; }
+.comment-content { flex: 1; min-width: 0; }
+.comment-actions { margin: 6px 0; }
+.comments-list { margin-top: 20px; }
+.initial-state { max-width: 960px; margin: 0 auto; }
+.mobile-action { display: none; }
+@media (max-width: 1200px) { .layout { gap: 42px; } }
+@media (max-width: 960px) { .layout { gap: 26px; grid-template-columns: minmax(0,.7fr) minmax(0,1.3fr); } }
+@media (max-width: 768px) { .activity-page { margin: -16px -12px -32px; } }
+@media (max-width: 640px) {
+  .activity-page { padding: 20px 16px calc(95px + env(safe-area-inset-bottom)); }
+  .layout { display: block; }
+  .identity { position: static; }
+  .identity-info { padding: 16px 0 22px; }
+  h1 { font-size: 32px; }
+  .registration { padding: 18px; }
+  .mobile-action { position: fixed; bottom: 0; inset-inline: 0; z-index: 20; display: flex; background: #fff;
+    border-top: 1px solid var(--ss-line-strong); padding: 10px 150px max(12px, env(safe-area-inset-bottom)) 16px; }
+  .mobile-action > * { flex: 1; min-height: 46px; }
+  .dock-buy { background: var(--ss-navy); color: white; }
+  .buy-link { min-height: 44px; }
 }
-
-.detail-card {
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.detail-header {
-  margin-bottom: 24px;
-}
-
-.cover-section {
-  width: 100%;
-  height: 300px;
-  border-radius: 12px;
-  overflow: hidden;
-  margin-bottom: 24px;
-  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
-}
-
-.cover-section img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.detail-title {
-  font-size: 32px;
-  font-weight: bold;
-  color: #333;
-  margin: 0 0 16px 0;
-  line-height: 1.4;
-}
-
-.detail-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.meta-tag {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #f5f5f5;
-  border-radius: 20px;
-  font-size: 14px;
-  color: #666;
-}
-
-.meta-tag .icon {
-  font-size: 16px;
-}
-
-.detail-content {
-  margin: 24px 0;
-}
-
-.summary {
-  font-size: 16px;
-  line-height: 1.8;
-  color: #666;
-  margin-bottom: 24px;
-}
-
-.action-section {
-  text-align: center;
-  padding: 24px 0;
-}
-
-.checkin-hint {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #909399;
-}
-
-/* Media links styling */
-.media-links-section {
-  margin: 32px 0;
-}
-
-.section-heading {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.media-links {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 24px;
-}
-
-.media-card {
-  position: relative;
-  border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.media-card.disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  filter: grayscale(0.85);
-  pointer-events: none;
-}
-
-.media-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.2);
-}
-
-.media-card-bg {
-  position: absolute;
-  inset: 0;
-  transition: opacity 0.4s ease;
-}
-
-.live-card .media-card-bg {
-  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #60a5fa 100%);
-}
-
-.replay-card .media-card-bg {
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%);
-}
-
-.media-card:hover .media-card-bg {
-  opacity: 0.95;
-}
-
-.media-card-content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 28px 24px;
-}
-
-.media-icon-wrapper {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.live-icon-wrapper {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-}
-
-.replay-icon-wrapper {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
-}
-
-.media-icon {
-  font-size: 32px;
-  color: #ffffff;
-}
-
-.media-info {
-  flex: 1;
-}
-
-.media-info h4 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0 0 6px 0;
-}
-
-.media-info p {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 0;
-}
-
-.media-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  border-radius: 24px;
-  transition: all 0.3s ease;
-}
-
-.media-card:hover .media-action {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateX(4px);
-}
-
-.action-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: #ffffff;
-}
-
-.action-arrow {
-  font-size: 16px;
-  color: #ffffff;
-  transition: transform 0.3s ease;
-}
-
-.media-card:hover .action-arrow {
-  transform: translateX(4px);
-}
-
-.live-indicator {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(239, 68, 68, 0.9);
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #ffffff;
-  letter-spacing: 1px;
-}
-
-.live-dot {
-  width: 8px;
-  height: 8px;
-  background: #ffffff;
-  border-radius: 50%;
-  animation: livePulse 1.5s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.8); }
-}
-
-.interaction-section {
-  margin-top: 24px;
-}
-
-.section-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-title h3 {
-  font-size: 20px;
-  color: #333;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.comment-form {
-  margin-bottom: 32px;
-}
-
-.comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.empty-comments {
-  text-align: center;
-  padding: 18px 10px 8px;
-}
-
-.comment-item {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: #f9f9f9;
-  border-radius: 12px;
-}
-
-.comment-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  color: white;
-  flex-shrink: 0;
-}
-
-.comment-content {
-  flex: 1;
-}
-
-.comment-text {
-  font-size: 14px;
-  color: #333;
-  line-height: 1.6;
-  margin-bottom: 8px;
-}
-
-.comment-actions {
-  display: flex;
-  gap: 8px;
-  margin: 8px 0;
-}
-
-.comment-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.heading-icon {
-  color: #409eff;
-}
-
-.btn-icon {
-  margin-right: 6px;
-}
-
-.inline-icon {
-  margin-right: 6px;
-}
+@media (max-width: 480px) { .mobile-action { padding-right: 80px; } }
 </style>

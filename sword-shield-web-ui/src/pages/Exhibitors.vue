@@ -1,16 +1,13 @@
 <template>
   <div class="page">
-    <h2 class="title">
-      <el-icon class="title-icon"><OfficeBuilding /></el-icon>
-      展商展览
-    </h2>
+    <h2 class="title">参展单位</h2>
     <el-row :gutter="16">
       <el-col :span="6" v-for="e in exhibitors" :key="e.id">
         <el-card class="card">
           <div class="logo-wrapper">
             <img v-if="e.logoUrl" :src="e.logoUrl" class="logo" @error="handleImageError" />
             <div v-else class="logo-placeholder">
-              <el-icon><OfficeBuilding /></el-icon>
+              <Icon name="building" :size="40" />
             </div>
           </div>
           <h3 class="name">{{ e.name }}</h3>
@@ -18,11 +15,11 @@
           <p class="desc">{{ e.introduction }}</p>
           <div class="action-links">
             <el-button v-if="e.website" size="small" @click="openLink(e.website)">
-              <el-icon class="icon"><Link /></el-icon>
+              <Icon name="link" :size="14" class="icon" />
               官网
             </el-button>
             <el-button v-if="e.videoUrl" type="primary" size="small" @click="openLink(e.videoUrl)">
-              <el-icon class="icon"><VideoCamera /></el-icon>
+              <Icon name="video" :size="14" class="icon" />
               视频介绍
             </el-button>
           </div>
@@ -48,6 +45,7 @@
  */
 import { ref, onMounted } from 'vue'
 import api from '../api'
+import Icon from '../components/ui/Icon.vue'
 import { ElMessage } from 'element-plus'
 
 const exhibitors = ref<any[]>([])
@@ -77,11 +75,10 @@ onMounted(() => load(1))
 </script>
 
 <style scoped>
-.page { max-width: 1200px; margin: 0 auto; padding: 20px; }
-.title { margin-bottom: 24px; font-size: 28px; display: flex; align-items: center; gap: 10px; }
-.title-icon { color: #409eff; }
-.card { border-radius: 16px; margin-bottom: 16px; transition: transform 0.3s, box-shadow 0.3s; }
-.card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); }
+.page { max-width: 1200px; margin: 0 auto; }
+.title { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #d8e0e5; font-size: 26px; font-weight: 700; color: #0b2545; }
+.card { border-radius: 8px; border: 1px solid #d8e0e5; margin-bottom: 16px; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.card:hover { border-color: #94a3b8; box-shadow: 0 6px 18px rgba(11, 37, 69, 0.08); }
 .logo-wrapper { width: 100%; height: 140px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border-radius: 8px; margin-bottom: 12px; }
 .logo { max-width: 100%; max-height: 140px; object-fit: contain; }
 .logo-placeholder { font-size: 48px; opacity: 0.3; }

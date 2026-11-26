@@ -8,15 +8,13 @@
           </el-avatar>
           <label class="upload-label">
             <input type="file" @change="onFile" accept="image/*" hidden ref="fileInput" />
-            <el-button type="primary" size="small" :loading="uploading" @click="triggerUpload" :icon="Camera">
+            <el-button type="primary" size="small" :loading="uploading" @click="triggerUpload">
+              <Icon name="camera" :size="14" style="margin-right: 4px" />
               {{ uploading ? '上传中...' : '更换头像' }}
             </el-button>
           </label>
         </div>
-        <h2 class="profile-title">
-          <el-icon class="title-icon"><Avatar /></el-icon>
-          个人信息
-        </h2>
+        <h2 class="profile-title">个人信息</h2>
       </div>
 
       <el-divider />
@@ -92,7 +90,7 @@
  * - POST `/file/upload`、GET `/file/presigned`
  */
 import { reactive, ref, onMounted } from 'vue'
-import { Avatar, Camera } from '@element-plus/icons-vue'
+import Icon from '../components/ui/Icon.vue'
 import api from '../api'
 import { ElMessage } from 'element-plus'
 
@@ -241,29 +239,29 @@ onMounted(load)
 }
 
 .profile-card {
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
+  box-shadow: none;
 }
 
 .profile-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .avatar-section {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
 }
 
 .large-avatar {
-  background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
-  font-size: 40px;
-  font-weight: bold;
-  color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  background: #0b2545;
+  font-size: 36px;
+  font-weight: 600;
+  color: #ffffff;
 }
 
 .upload-label {
@@ -271,31 +269,23 @@ onMounted(load)
 }
 
 .profile-title {
-  font-size: 28px;
-  color: #333;
+  font-size: 22px;
+  color: #0b2545;
   margin: 0;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.title-icon {
-  color: #409eff;
+  font-weight: 700;
 }
 
 .profile-form {
-  margin-top: 32px;
+  margin-top: 24px;
 }
 
 .profile-form :deep(.el-form-item__label) {
   font-weight: 500;
-  color: #666;
+  color: #506273;
 }
 
 .profile-form :deep(.el-input__inner) {
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .profile-form :deep(.el-radio-group) {
@@ -305,16 +295,15 @@ onMounted(load)
 
 .save-button {
   width: 100%;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  border: none;
-  font-size: 16px;
+  background: #0b2545;
+  border-color: #0b2545;
+  font-size: 15px;
   font-weight: 600;
   margin-top: 8px;
 }
 
 .save-button:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  background: #183a63;
+  border-color: #183a63;
 }
 </style>

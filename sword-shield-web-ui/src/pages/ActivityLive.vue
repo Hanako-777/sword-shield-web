@@ -574,7 +574,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-weight: 800;
@@ -591,7 +591,7 @@ onBeforeUnmount(() => {
 
 .live-time {
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   font-weight: 700;

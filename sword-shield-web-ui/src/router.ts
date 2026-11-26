@@ -16,6 +16,7 @@ import ActivityLive from './pages/ActivityLive.vue'
 import Articles from './pages/Articles.vue'
 import ArticleDetail from './pages/ArticleDetail.vue'
 import Profile from './pages/Profile.vue'
+import Orders from './pages/Orders.vue'
 import Points from './pages/Points.vue'
 import Statistics from './pages/Statistics.vue'
 import UGCSubmit from './pages/UGCSubmit.vue'
@@ -28,6 +29,7 @@ import AdminMedia from './pages/admin/AdminMedia.vue'
 import AdminMaterials from './pages/admin/AdminMaterials.vue'
 import AdminArticles from './pages/admin/AdminArticles.vue'
 import AdminSubmissions from './pages/admin/AdminSubmissions.vue'
+import AdminLogs from './pages/admin/AdminLogs.vue'
 import Exhibitors from './pages/Exhibitors.vue'
 import Achievements from './pages/Achievements.vue'
 import Materials from './pages/Materials.vue'
@@ -44,6 +46,7 @@ const routes = [
   { path: '/articles', component: Articles },
   { path: '/article/:id', component: ArticleDetail },
   { path: '/profile', component: Profile },
+  { path: '/orders', component: Orders },
   { path: '/checkin', redirect: '/points' },
   { path: '/points', component: Points },
   { path: '/statistics', component: Statistics },
@@ -64,12 +67,25 @@ const routes = [
       { path: 'articles', component: AdminArticles },
       { path: 'submissions', component: AdminSubmissions },
       { path: 'media', component: AdminMedia },
-      { path: 'materials', component: AdminMaterials }
+      { path: 'materials', component: AdminMaterials },
+      { path: 'logs', component: AdminLogs }
     ]
   }
 ]
 
-const router = createRouter({ history: createWebHistory(), routes })
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, _from, savedPosition) {
+    if (to.hash) {
+      return { el: to.hash, behavior: 'smooth' }
+    }
+    if (savedPosition) {
+      return savedPosition
+    }
+    return { top: 0, left: 0 }
+  }
+})
 
 type JwtPayload = {
   /** JWT 过期时间（秒级时间戳）。 */

@@ -1,33 +1,37 @@
 <template>
   <div class="article-page">
+    <div v-if="item" ref="progressBar" class="reading-progress" aria-hidden="true"></div>
     <div class="article-container">
       
       <!-- Navigation / Breadcrumb -->
       <div class="nav-header">
-        <el-button link :icon="ArrowLeft" @click="goBack" class="back-link">
+        <el-button link @click="goBack" class="back-link">
+          <Icon name="arrow-left" :size="16" style="margin-right: 4px" />
           返回列表
         </el-button>
       </div>
 
-      <el-card v-if="item" class="article-card" shadow="never">
+      <ReadState v-if="loading || !item" :loading="loading" :error="error" empty="暂无资讯" @retry="load" />
+      <article v-else ref="article" class="article-card">
         
         <!-- Article Header -->
         <header class="article-header">
           <div class="article-meta-top">
-             <el-tag :type="getCategoryType(item.category)" effect="light" round size="small">
+             <span class="ss-badge">
                {{ item.category || '通用' }}
-             </el-tag>
+             </span>
              <span class="publish-date">{{ formatDate(item.publishedAt) }}</span>
           </div>
           <h1 class="article-title">{{ item.title }}</h1>
         </header>
 
+        <img v-if="item.coverUrl" :src="item.coverUrl" :alt="item.title" class="article-cover" />
         <!-- Summary / Lead -->
         <div class="article-summary" v-if="item.summary">
           <p>{{ item.summary }}</p>
         </div>
 
-        <el-divider border-style="dashed" />
+
 
         <!-- Main Body -->
         <div class="article-body">
@@ -36,39 +40,37 @@
 
         <!-- Action Bar (Like/Share) -->
         <div class="article-actions">
-           <el-button-group>
+           <div class="pills">
             <el-button 
-              type="primary" 
-              plain 
-              round 
+              :type="liked ? 'primary' : 'default'"
               size="large"
-              :icon="liked ? StarFilled : Star"
               @click="like" 
               :loading="liking"
             >
+              <Icon name="star" :size="16" :filled="liked" style="margin-right: 6px" />
               {{ liked ? `已点赞 ${likeCount}` : (likeCount > 0 ? `点赞 ${likeCount}` : '点赞') }}
             </el-button>
             <el-button 
-              round 
               size="large"
-              :icon="Share"
               @click="share" 
               :loading="sharing"
             >
+              <Icon name="share" :size="16" style="margin-right: 6px" />
               分享
             </el-button>
-          </el-button-group>
+          </div>
         </div>
-      </el-card>
+      </article>
 
       <!-- Media Gallery Section -->
-      <div v-if="relatedMedia.length > 0" class="section-container media-section">
+      <ReadState v-if="error && item && !loading" :error="error" @retry="load" />
+      <section v-if="item && relatedMedia.length" v-reveal class="section-container media-section reveal">
         <h3 class="section-heading">
-          <span class="icon-wrapper"><el-icon><VideoCamera /></el-icon></span>
+          <span class="icon-wrapper"><Icon name="video" :size="18" /></span>
           精彩花絮
         </h3>
         <div class="gallery-grid">
-          <div 
+          <button type="button"
             v-for="media in relatedMedia" 
             :key="media.id" 
             class="media-card"
@@ -88,8 +90,8 @@
                 :alt="media.title"
               />
               <div class="placeholder-icon" v-else>
-                 <el-icon v-if="media.type === 'image'"><Picture /></el-icon>
-                 <el-icon v-else><VideoPlay /></el-icon>
+                 <Icon v-if="media.type === 'image'" name="image" :size="24" />
+                 <Icon v-else name="play-circle" :size="24" />
               </div>
               
               <div class="media-badge" :class="media.type">
@@ -97,18 +99,18 @@
               </div>
               
               <div class="play-overlay" v-if="media.type === 'video'">
-                 <el-icon><VideoPlay /></el-icon>
+                 <Icon name="play-circle" :size="20" />
               </div>
             </div>
             <div class="media-info">
               <h4 class="media-title" :title="media.title">{{ media.title }}</h4>
             </div>
-          </div>
+          </button>
         </div>
-      </div>
+      </section>
 
       <!-- Comments Section -->
-      <div class="section-container comments-section">
+      <section v-if="item && !loading" v-reveal class="section-container comments-section reveal">
         <div class="section-title">
           <h3>评论 {{ comments.length > 0 ? `(${comments.length})` : '' }}</h3>
         </div>
@@ -136,7 +138,8 @@
         </div>
 
         <div class="comments-list">
-          <div v-if="comments.length === 0" class="empty-state">
+          <ReadState v-if="commentsLoading || commentsError" :loading="commentsLoading" :error="commentsError" @retry="loadComments" />
+          <div v-else-if="comments.length === 0" class="empty-state">
             <el-empty description="暂无评论，来坐沙发！" :image-size="80" />
           </div>
           
@@ -154,28 +157,27 @@
               </div>
               <div class="comment-footer">
                 <el-button 
-                  link 
                   size="small" 
                   @click="likeComment(c)" 
                   :loading="c._liking"
                   :type="c.isLiked ? 'primary' : 'default'"
                 >
-                  <el-icon style="margin-right: 4px"><component :is="c.isLiked ? StarFilled : Star" /></el-icon>
+                  <Icon name="star" :size="14" :filled="!!c.isLiked" style="margin-right: 4px" />
                    {{ c.isLiked ? '已点赞' : '点赞' }} {{ c.likeCount ?? 0 }}
                 </el-button>
-                <el-button link size="small">回复</el-button>
+                <el-button size="small" @click="focusCommentBox">回复</el-button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
 
     <!-- Media Preview Dialog -->
     <el-dialog 
       v-model="mediaPreviewVisible" 
       :title="currentMedia?.title"
-      width="800px"
+      width="min(800px, calc(100% - 24px))"
       align-center
       destroy-on-close
       class="media-preview-dialog"
@@ -218,12 +220,24 @@
  * - POST `/interaction/like`、GET `/interaction/likes/count`、POST `/interaction/share`
  * - POST `/content/poster`、GET `/content/poster/jobs/:jobId`
  */
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Picture, VideoPlay, VideoCamera, Star, StarFilled, Share } from '@element-plus/icons-vue'
+import Icon from '../components/ui/Icon.vue'
 import api from '../api'
 import { ElMessage } from 'element-plus'
 
+import ReadState from '../components/detail/ReadState.vue'
+import { useReadState } from '../components/detail/useReadState'
+import { vReveal } from '../directives/reveal'
+
+const { loading, error, run: readPage } = useReadState()
+const { loading: commentsLoading, error: commentsError, run: readComments } = useReadState()
+function load() {
+  return readPage(fetchDetail, '加载失败，请稍后重试')
+}
+function loadComments() {
+  return readComments(fetchComments, '评论加载失败')
+}
 const route = useRoute()
 const router = useRouter()
 const item = ref<any>(null)
@@ -261,22 +275,6 @@ function formatDate(dateStr: string) {
   return date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-function getCategoryType(category: string) {
-  const types: Record<string, any> = {
-    '技术': 'primary',
-    '安全': 'danger',
-    '行业': 'success',
-    '通知': 'warning'
-  }
-  return types[category] || 'info'
-}
-
-function openLink(url: string) {
-  if (url) {
-    window.open(url, '_blank')
-  }
-}
-
 function goBack() {
   if (window.history.length > 1) {
     router.back()
@@ -292,7 +290,7 @@ async function focusCommentBox() {
 }
 
 
-async function load() {
+async function fetchDetail() {
   const id = getRouteId()
   if (!id) {
     ElMessage.error('未指定文章 ID')
@@ -300,7 +298,9 @@ async function load() {
   }
 
   const { data } = await api.get('/content/article', { params: { id } })
-  if (data.code === 0) item.value = data.data
+  if (data.code !== 0) throw new Error(data.message || '资讯加载失败')
+  item.value = data.data
+  if (!item.value) return
 
   const token = localStorage.getItem('token')
   if (token) {
@@ -377,7 +377,7 @@ async function previewMedia(media: any) {
   }
 }
 
-async function loadComments() {
+async function fetchComments() {
   const { data } = await api.get('/interaction/comments', { 
     params: { 
       targetType: 'article', 
@@ -386,6 +386,7 @@ async function loadComments() {
       size: 10 
     } 
   })
+  if (data.code !== 0) throw new Error(data.message || '评论加载失败')
   if (data.code === 0) {
     comments.value = data.data.items
     const token = localStorage.getItem('token')
@@ -601,309 +602,86 @@ async function likeComment(c: any) {
   }
 }
 
-onMounted(async () => {
-  await load()
-  await loadComments()
+const article = ref<HTMLElement>()
+const progressBar = ref<HTMLElement>()
+let frame = 0
+let resize: ResizeObserver | undefined
+function measureProgress() {
+  frame = 0
+  if (!article.value || !progressBar.value) return
+  const rect = article.value.getBoundingClientRect()
+  const header = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ss-header-h')) || 0
+  const distance = rect.height - (window.innerHeight - header)
+  const fraction = distance <= 0 ? Number(rect.bottom <= window.innerHeight) : (header - rect.top) / distance
+  progressBar.value.style.transform = 'scaleX(' + Math.min(1, Math.max(0, fraction)) + ')'
+}
+function queueProgress() {
+  if (!frame) frame = requestAnimationFrame(measureProgress)
+}
+watch(article, el => {
+  resize?.disconnect()
+  if (!el) return
+  resize = new ResizeObserver(queueProgress)
+  resize.observe(el)
+  queueProgress()
+}, { flush: 'post' })
+onMounted(() => {
+  load()
+  loadComments()
+  window.addEventListener('scroll', queueProgress, { passive: true })
+  window.addEventListener('resize', queueProgress)
+})
+onBeforeUnmount(() => {
+  cancelAnimationFrame(frame)
+  resize?.disconnect()
+  window.removeEventListener('scroll', queueProgress)
+  window.removeEventListener('resize', queueProgress)
 })
 </script>
 
+<style scoped src="../components/detail/detail.css"></style>
 <style scoped>
-.article-page {
-  min-height: 100vh;
-  background-color: #f3f4f6;
-  padding: 24px 16px;
-  display: flex;
-  justify-content: center;
-}
-
-.article-container {
-  width: 100%;
-  max-width: 800px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.nav-header {
-  margin-bottom: -8px;
-}
-.back-link {
-  font-size: 14px;
-  color: #606266;
-}
-.back-link:hover {
-  color: #409eff;
-}
-
-/* Article Card */
-.article-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  overflow: visible; /* To allow sticky elements if needed */
-}
-
-/* Article Header */
-.article-header {
-  text-align: center;
-  margin-bottom: 24px;
-  padding-top: 10px;
-}
-
-.article-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #111827;
-  line-height: 1.4;
-  margin: 16px 0;
-}
-
-.article-meta-top {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-/* Summary */
-.article-summary {
-  background-color: #f8fafc;
-  border-left: 4px solid #409eff;
-  padding: 16px 20px;
-  border-radius: 4px;
-  margin-bottom: 30px;
-  font-size: 16px;
-  color: #475569;
-  line-height: 1.6;
-  font-style: italic;
-}
-
-/* Body Content */
-.article-body {
-  margin-bottom: 40px;
-}
-.typo-content {
-  color: #334155;
-  font-size: 17px;
-  line-height: 1.8;
-  word-wrap: break-word;
-}
-/* Deep selector for v-html content styles */
-.typo-content :deep(p) {
-  margin-bottom: 1.5em;
-}
-.typo-content :deep(img) {
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-  display: block;
-  margin: 20px auto;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-}
-.typo-content :deep(h2), .typo-content :deep(h3) {
-  color: #1e293b;
-  font-weight: 600;
-  margin-top: 2em;
-  margin-bottom: 1em;
-}
-
-/* Actions */
-.article-actions {
-  display: flex;
-  justify-content: center;
-  margin: 40px 0 10px;
-}
-
-/* Section Common Styles */
-.section-container {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.section-heading, .section-title h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 20px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.icon-wrapper {
-  color: #409eff;
-  display: flex;
-  align-items: center;
-}
-
-/* Gallery Grid */
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.media-card {
-  cursor: pointer;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-  background: #fff;
-  border: 1px solid #f3f4f6;
-}
-.media-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.media-cover {
-  position: relative;
-  aspect-ratio: 16/9;
-  background: #f1f5f9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cover-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.placeholder-icon {
-  font-size: 40px;
-  color: #cbd5e1;
-}
-
-.media-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 600;
-  color: #fff;
-  text-transform: uppercase;
-}
-.media-badge.image { background: rgba(59, 130, 246, 0.9); }
-.media-badge.video { background: rgba(239, 68, 68, 0.9); }
-
-.play-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.play-overlay .el-icon {
-  font-size: 32px;
-  color: white;
-}
-.media-card:hover .play-overlay {
-  opacity: 1;
-}
-
-.media-info {
-  padding: 12px;
-}
-.media-title {
-  margin: 0;
-  font-size: 14px;
-  color: #374151;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Comments */
-.comment-input-area {
-  margin-bottom: 30px;
-}
-.input-actions {
-  margin-top: 12px;
-  text-align: right;
-}
-
-.comments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.comment-item {
-  display: flex;
-  gap: 16px;
-}
-
-.comment-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-
-.comment-main {
-  flex: 1;
-  background: #f9fafb;
-  padding: 16px;
-  border-radius: 12px;
-  border-bottom-left-radius: 2px; /* Chat bubble style */
-}
-
-.comment-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-.user-name {
-  font-weight: 600;
-  color: #374151;
-}
-.time-ago {
-  color: #9ca3af;
-}
-
-.comment-body {
-  font-size: 14px;
-  color: #1f2937;
-  line-height: 1.6;
-  margin-bottom: 10px;
-  white-space: pre-wrap;
-}
-
-.comment-footer {
-  display: flex;
-  gap: 12px;
-}
-
-/* Responsive */
-@media (max-width: 640px) {
-  .article-title {
-    font-size: 22px;
-  }
-  .article-card, .section-container {
-    padding: 16px;
-    border-radius: 0;
-  }
-  .article-page {
-    padding: 0;
-  }
-  .gallery-grid {
-    grid-template-columns: 1fr;
-  }
-}
+.article-page { color: var(--ss-ink); font-family: var(--ss-font); padding: 18px 0 56px; }
+.article-container { width: min(100%, var(--ss-w-read)); margin-inline: auto; }
+.reading-progress { position: fixed; top: var(--ss-header-h); inset-inline: 0; z-index: 10; height: 2px;
+  background: var(--ss-navy); transform-origin: left; transform: scaleX(0); pointer-events: none; }
+.nav-header { margin-bottom: 20px; }
+.back-link { color: var(--ss-muted); }
+.article-title { margin: 12px 0 20px; color: var(--ss-navy); font-size: 36px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.article-meta-top, .pills, .comment-header, .comment-footer, .section-heading { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.publish-date, .time-ago { color: var(--ss-muted); font-size: 13px; }
+.article-cover { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 22px; background: var(--ss-bg-soft); margin: 0 0 24px; }
+.article-summary { margin-bottom: 26px; padding: 4px 0 4px 16px; border-left: 2px solid var(--ss-line-strong); color: var(--ss-muted); font-size: 17px; line-height: 1.8; }
+.typo-content { font-size: 17px; line-height: 1.8; overflow-wrap: anywhere; }
+.typo-content :deep(p), .typo-content :deep(ul), .typo-content :deep(ol) { margin-block: 0 1.15em; }
+.typo-content :deep(ul), .typo-content :deep(ol) { padding-inline-start: 1.65em; }
+.typo-content :deep(li + li) { margin-top: .35em; }
+.typo-content :deep(h2), .typo-content :deep(h3) { color: var(--ss-navy); margin: 1.45em 0 .5em; line-height: 1.4; }
+.typo-content :deep(img) { display: block; max-width: 100%; height: auto; border-radius: 20px; margin: 20px auto; }
+.typo-content :deep(pre), .typo-content :deep(table) { display: block; max-width: 100%; overflow-x: auto; }
+.typo-content :deep(a) { text-decoration: underline; text-underline-offset: .18em; }
+.article-actions { margin-top: 28px; }
+.pills .el-button { margin: 0; border-radius: 12px; }
+.comment-footer .el-button { margin: 0; border-radius: 8px; }
+.section-container { padding-top: 24px; border-top: 1px solid var(--ss-line); margin-top: 38px; }
+.section-heading, .section-title h3 { color: var(--ss-navy); font-size: 21px; margin-bottom: 16px; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(180px,100%),1fr)); gap: 14px; }
+.media-card { overflow: hidden; text-align: left; color: inherit; font: inherit; cursor: pointer; padding: 0; border-radius: 20px; border: 1px solid var(--ss-line-strong); background: white; }
+.media-cover { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--ss-bg-soft); }
+.cover-img { width: 100%; height: 100%; object-fit: cover; }
+.media-badge, .play-overlay { position: absolute; color: white; background: var(--ss-navy); border-radius: 20px; }
+.media-badge { top: 10px; left: 10px; font-size: 12px; padding: 2px 8px; border-radius: 6px; }
+.play-overlay { display: grid; place-items: center; width: 36px; height: 36px; }
+.media-info { padding: 12px 14px; }
+.preview-img, .preview-video { display: block; width: 100%; max-height: 65vh; object-fit: contain; }
+.preview-desc { margin-top: 12px; }
+.input-actions { margin: 12px 0 20px; text-align: right; }
+.comment-item { display: flex; gap: 12px; padding: 18px 0; border-top: 1px solid var(--ss-line); }
+.comment-avatar { flex: 0 0 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--ss-bg-soft); color: var(--ss-navy); }
+.comment-main { min-width: 0; flex: 1; }
+.comment-header { justify-content: space-between; font-size: 14px; }
+.comment-body { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0 10px; }
+@media(max-width:1200px) { .article-page { padding-top: 14px; } }
+@media(max-width:960px) { .section-container { margin-top: 30px; } }
+@media(max-width:640px) { .article-page { padding: 0 4px 36px; } .gallery-grid { grid-template-columns: 1fr; } .article-cover { border-radius: 20px; } }
 </style>

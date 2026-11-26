@@ -2,13 +2,10 @@
   <div class="submit-container">
     <el-card class="submit-card">
       <div class="submit-back">
-        <el-button text :icon="ArrowLeft" @click="goBack">返回</el-button>
+        <el-button text @click="goBack"><Icon name="arrow-left" :size="15" style="margin-right: 4px" />返回</el-button>
       </div>
-      <h2 class="submit-title">
-        <el-icon class="title-icon"><EditPen /></el-icon>
-        投稿 · 大会相关内容
-      </h2>
-      <p class="submit-desc">分享你的大会见闻、心得与精彩瞬间，优秀内容将有机会在平台展示。</p>
+      <h2 class="submit-title">在线投稿</h2>
+      <p class="submit-desc">分享参会见闻与技术总结，通过审核后将展示在用户投稿栏目。</p>
       <el-form :model="form" label-width="100px" class="submit-form">
         <el-form-item label="标题" required>
           <el-input v-model="form.title" placeholder="请输入标题" />
@@ -48,7 +45,7 @@
  */
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import Icon from '../components/ui/Icon.vue'
 import api from '../api'
 import { ElMessage } from 'element-plus'
 
@@ -103,13 +100,13 @@ async function submit() {
 </script>
 
 <style scoped>
-.submit-container { max-width: 900px; margin: 0 auto; }
-.submit-card { border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); }
+.submit-container { max-width: 860px; margin: 0 auto; }
+.submit-card { border-radius: 8px; border: 1px solid #d8e0e5; box-shadow: none; }
 .submit-back { margin-bottom: 6px; }
-.submit-title { margin: 0 0 8px; font-size: 24px; display: flex; align-items: center; gap: 8px; }
-.title-icon { color: #2563eb; }
-.submit-desc { margin: 0 0 16px; color: #666; }
-.cover-upload { display: flex; gap: 12px; align-items: center; }
-.cover-preview { margin-top: 12px; max-width: 100%; border-radius: 8px; }
-.submit-btn { width: 100%; background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); border: none; }
+.submit-title { margin: 0 0 6px; font-size: 22px; font-weight: 700; color: #0b2545; }
+.submit-desc { margin: 0 0 20px; font-size: 14px; color: #506273; }
+.cover-upload { display: flex; gap: 12px; align-items: center; width: 100%; }
+.cover-preview { margin-top: 12px; max-width: 100%; border-radius: 6px; }
+.submit-btn { width: 100%; background: #0b2545; border-color: #0b2545; }
+.submit-btn:hover { background: #183a63; border-color: #183a63; }
 </style>

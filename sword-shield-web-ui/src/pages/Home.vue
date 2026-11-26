@@ -1,317 +1,185 @@
 <template>
   <div class="home-page">
-    <section class="hero-panel">
-      <div class="hero-left">
-        <div class="hero-badge">西湖论剑 · 会议运营平台</div>
-        <h1 class="hero-title">构建会议活动的数字安全防线</h1>
-        <p class="hero-subtitle">
-          聚焦会议全流程数字安全管理，为主办方提供活动报名、签到管理、内容分发与数据分析的一体化能力。
-        </p>
-        <div class="hero-actions">
-          <el-button type="primary" size="large" @click="$router.push('/activities')">
-            查看活动日程
-          </el-button>
-          <el-button size="large" plain @click="$router.push('/statistics')">
-            浏览数据看板
-          </el-button>
+    <ConferenceHero :events="events" />
+
+    <div id="home-explore" class="home-below" tabindex="-1" role="region" aria-label="探索活动">
+      <!-- 1. 活动回顾 -->
+      <div v-reveal class="home-section home-reveal">
+        <HomeActivities
+          :events="events"
+          :now="now"
+          :loading="eventsLoading"
+          :error="eventsError"
+          @retry="reloadEvents"
+        />
+      </div>
+
+      <!-- 2. 即将举办 -->
+      <div v-reveal class="home-section home-reveal">
+        <HomeUpcoming :items="featuredConferences" />
+      </div>
+
+      <!-- 3. 最新资讯（含分类） -->
+      <div v-reveal class="home-section home-reveal">
+        <HomeArticles />
+      </div>
+
+      <!-- 4. 我报名的活动（仅登录后显示） -->
+      <section v-if="isLoggedIn" v-reveal class="home-section home-reveal" aria-labelledby="home-mine-title">
+        <HomeSectionHead title="我报名的活动" title-id="home-mine-title">
+          <template #links>
+            <button type="button" class="home-section-link" :disabled="myActivitiesLoading" @click="loadMyActivities">
+              <span>{{ myActivitiesLoading ? '刷新中...' : '刷新' }}</span>
+            </button>
+            <router-link v-if="myActivitiesTotal > 5" to="/profile" class="home-section-link">
+              <span>查看全部 ({{ myActivitiesTotal }})</span>
+              <Icon name="arrow-right" :size="16" />
+            </router-link>
+          </template>
+        </HomeSectionHead>
+
+        <div v-if="myActivitiesLoading && !myActivities.length" class="mine-grid" aria-busy="true">
+          <div v-for="n in 4" :key="n" class="mine-card skeleton-card">
+            <div class="ss-skeleton sk-date-box" />
+            <div class="mine-info">
+              <div class="ss-skeleton sk-line-1" />
+              <div class="ss-skeleton sk-line-2" />
+            </div>
+          </div>
         </div>
 
-        <!-- 新增：会议图片轮播 -->
-        <div class="hero-carousel">
-          <el-carousel 
-            :interval="4000" 
-            height="340px"
-            :autoplay="true"
-            arrow="hover"
+        <div v-else-if="myActivitiesError && !myActivities.length" class="mine-state">
+          <p>{{ myActivitiesError }}</p>
+          <button type="button" class="mine-btn" @click="loadMyActivities">重新加载</button>
+        </div>
+
+        <div v-else-if="myActivities.length === 0" class="mine-state">
+          <p>您还没有报名任何活动</p>
+          <router-link to="/activities" class="mine-btn mine-btn--dark">去报名活动</router-link>
+        </div>
+
+        <div v-else class="mine-grid">
+          <button
+            v-for="activity in myActivities"
+            :key="activity.id"
+            type="button"
+            class="mine-card"
+            @click="$router.push(`/activity/${activity.id}`)"
           >
-            <el-carousel-item v-for="(item, index) in carouselItems" :key="index">
-              <div class="carousel-card" @click="goToActivity(item.link)">
-                <img :src="item.image" :alt="item.title" class="carousel-image" />
-                <div class="carousel-overlay">
-                  <div class="carousel-content">
-                    <span class="carousel-tag">{{ item.tag }}</span>
-                    <h4>{{ item.title }}</h4>
-                    <p>{{ item.desc }}</p>
-                  </div>
-                </div>
-              </div>
-            </el-carousel-item>
-          </el-carousel>
-        </div>
-
-        <div class="hero-highlights">
-          <div class="highlight-item">
-            <div class="highlight-number">360°</div>
-            <div class="highlight-label">全流程安全管理</div>
-          </div>
-          <div class="highlight-item">
-            <div class="highlight-number">24×7</div>
-            <div class="highlight-label">实时运行监测</div>
-          </div>
-          <div class="highlight-item">
-            <div class="highlight-number">多场景</div>
-            <div class="highlight-label">论坛 / 展会 / 路演</div>
-          </div>
-        </div>
-
-        <!-- 新增：快捷入口 -->
-        <div class="quick-access">
-          <div class="quick-item" @click="$router.push('/activities')">
-            <div class="quick-icon"><el-icon><Calendar /></el-icon></div>
-            <span>活动报名</span>
-          </div>
-          <div class="quick-item" @click="$router.push('/materials')">
-            <div class="quick-icon"><el-icon><Download /></el-icon></div>
-            <span>资料下载</span>
-          </div>
-          <div class="quick-item" @click="$router.push('/media')">
-            <div class="quick-icon"><el-icon><VideoCamera /></el-icon></div>
-            <span>精彩回顾</span>
-          </div>
-          <div class="quick-item" @click="$router.push('/submit')">
-            <div class="quick-icon"><el-icon><EditPen /></el-icon></div>
-            <span>在线投稿</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-right">
-        <div class="hero-card primary">
-          <div class="card-header">
-            <h3>热门活动</h3>
-            <el-button text @click="$router.push('/activities')">全部活动</el-button>
-          </div>
-          <div class="card-body scrollable">
-            <Activities minimal />
-          </div>
-        </div>
-
-        <div class="hero-card">
-          <div class="card-header">
-            <h3>最新资讯</h3>
-            <el-button text @click="$router.push('/articles')">更多资讯</el-button>
-          </div>
-          <div class="card-body scrollable">
-            <Articles minimal />
-          </div>
-        </div>
-
-        <div v-if="isLoggedIn" class="hero-card compact">
-          <div class="card-header">
-            <h3>我报名的活动</h3>
-            <el-button text @click="loadMyActivities">刷新</el-button>
-          </div>
-          <div class="card-body my-activities">
-            <div v-if="myActivitiesLoading" class="loading-state">
-              <el-icon class="is-loading"><Loading /></el-icon>
-              <span>加载中...</span>
+            <div class="ss-date-block mine-date-box" aria-hidden="true">
+              <span class="ss-date-block__m">{{ activityDateParts(activity.startTime).month }}</span>
+              <span class="ss-date-block__d mine-date-day">{{ activityDateParts(activity.startTime).day }}</span>
             </div>
-            <div v-else-if="myActivities.length === 0" class="empty-state">
-              <p>您还没有报名任何活动</p>
-              <el-button type="primary" size="small" @click="$router.push('/activities')">
-                去报名活动
-              </el-button>
-            </div>
-            <ul v-else class="my-activities-list">
-              <li v-for="activity in myActivities" :key="activity.id" class="my-activity-item">
-                <div class="activity-info" @click="$router.push(`/activity/${activity.id}`)">
-                  <div class="activity-title">
-                    <span class="activity-dot" />
-                    <span>{{ activity.title }}</span>
-                  </div>
-                  <div class="activity-meta">
-                    <span class="meta-item">{{ formatDateTime(activity.startTime) }}</span>
-                    <span class="meta-item channel">{{ getChannelLabel(activity.registrationChannel) }}</span>
-                  </div>
-                </div>
-                <el-tag :type="getActivityStatus(activity).type" size="small">
-                  {{ getActivityStatus(activity).label }}
-                </el-tag>
-              </li>
-            </ul>
-            <div v-if="myActivitiesTotal > 5" class="view-all">
-              <el-button text size="small" @click="$router.push('/profile')">
-                查看全部 ({{ myActivitiesTotal }})
-              </el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 新增：近期大会活动展示区块 -->
-    <section class="conference-section">
-      <div class="conference-header">
-        <div class="conference-title-block">
-          <div class="section-label">近期大会 · 精选活动</div>
-          <h2>聚焦数字安全大会与高端论坛</h2>
-          <p>
-            汇总最近开展和即将举办的重点大会活动，从主论坛到分论坛，再到配套展览，
-            为参会者提供一目了然的时间轴与关键信息。
-          </p>
-        </div>
-        <div class="conference-cta">
-          <el-button type="primary" size="large" @click="$router.push('/activities')">
-            查看全部活动
-          </el-button>
-        </div>
-      </div>
-
-      <div class="conference-layout">
-        <div class="conference-main">
-          <ul class="conference-timeline">
-            <li
-              v-for="(item, index) in featuredConferences"
-              :key="item.id || index"
-              class="conference-item"
-            >
-              <div class="timeline-node">
-                <div class="timeline-dot" />
-                <div class="timeline-line" />
+            <div class="mine-info">
+              <div class="mine-title-row">
+                <span
+                  v-if="getActivityStatus(activity).label === '进行中'"
+                  class="mine-live-dot"
+                  aria-hidden="true"
+                />
+                <span class="mine-title">{{ activity.title }}</span>
               </div>
-              <div class="conference-content">
-                <div class="conference-meta-row">
-                  <span class="conference-tag">{{ item.type }}</span>
-                  <span class="conference-status" :data-status="item.status">
-                    {{ getStatusText(item.status) }}
-                  </span>
-                </div>
-                <h3 class="conference-name">{{ item.title }}</h3>
-                <p class="conference-desc">{{ item.description }}</p>
-                <div class="conference-meta">
-                  <span class="meta-chip">
-                    <span class="meta-dot primary" />
-                    {{ item.dateRange }}
-                  </span>
-                  <span class="meta-chip">
-                    <span class="meta-dot" />
-                    {{ item.location }}
-                  </span>
-                  <span class="meta-chip">
-                    <span class="meta-dot" />
-                    {{ item.scale }}
-                  </span>
-                </div>
-              </div>
-            </li>
-          </ul>
+              <span class="mine-meta">
+                {{ formatDateTime(activity.startTime) }} · {{ getChannelLabel(activity.registrationChannel) }} · {{ getActivityStatus(activity).label }}
+              </span>
+            </div>
+          </button>
         </div>
+      </section>
 
-        <aside class="conference-side">
-          <div class="side-card">
-            <h3>会议运营概览</h3>
-            <ul class="side-metrics">
-              <li>
-                <div class="metric-label">近 30 天累计参会人数</div>
-                <div class="metric-value">8,420</div>
-              </li>
-              <li>
-                <div class="metric-label">正在筹备的大会</div>
-                <div class="metric-value metric-accent">5 场</div>
-              </li>
-              <li>
-                <div class="metric-label">平均签到完成率</div>
-                <div class="metric-value">96.3%</div>
-              </li>
-            </ul>
-          </div>
-
-          <div class="side-card secondary">
-            <h3>推荐操作</h3>
-            <ul class="side-actions">
-              <li @click="$router.push('/points')">
-                <div class="action-icon action-icon-primary">
-                  <el-icon><Trophy /></el-icon>
-                </div>
-                <div class="action-text">
-                  <div class="action-title">积分详情</div>
-                  <div class="action-desc">查看积分余额与获取记录。</div>
-                </div>
-              </li>
-              <li @click="$router.push('/submit')">
-                <div class="action-icon action-icon-secondary">
-                  <el-icon><Document /></el-icon>
-                </div>
-                <div class="action-text">
-                  <div class="action-title">提交演讲/成果</div>
-                  <div class="action-desc">在线管理演讲稿、PPT 与成果材料。</div>
-                </div>
-              </li>
-              <li @click="$router.push('/materials')">
-                <div class="action-icon action-icon-tertiary">
-                  <el-icon><Download /></el-icon>
-                </div>
-                <div class="action-text">
-                  <div class="action-title">下载大会资料</div>
-                  <div class="action-desc">统一下载会议议程、手册与活动纪要。</div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </aside>
+      <!-- 6. 大会概览 -->
+      <div v-reveal class="home-section home-reveal">
+        <ConferenceMetrics
+          :now="now"
+          :next="upcoming[0] || ongoing[0]"
+          :date-range="featuredConferences[0].dateRange"
+          :location="featuredConferences[0].location"
+          :activity-total="eventsTotal"
+          :activity-loading="eventsLoading"
+          :activity-error="eventsError"
+          @retry="reloadEvents"
+        />
       </div>
-    </section>
 
-    <section class="poster-section">
-      <div class="poster-header">
-        <div>
-          <h2>智能海报生成</h2>
-          <p>为活动快速生成视觉统一的宣传海报，支持标题与副标题定制。</p>
-        </div>
-        <div class="poster-actions">
-          <el-button type="primary" @click="generatePoster" :loading="generating">
-            生成海报
-          </el-button>
-        </div>
-      </div>
-      <el-form @submit.prevent class="poster-form">
-        <el-row :gutter="16">
-          <el-col :xs="24" :sm="12">
+      <!-- 7. 宣传海报生成 -->
+      <section v-reveal class="home-section home-reveal" aria-labelledby="home-poster-title">
+        <HomeSectionHead title="宣传海报生成" title-id="home-poster-title" />
+        <div class="poster-panel">
+          <p class="poster-desc">输入活动主副标题，快速生成统一样式的大会宣传海报。</p>
+          <el-form class="poster-form" @submit.prevent>
             <el-form-item label="海报标题">
               <el-input v-model="title" placeholder="请输入海报主标题，如“西湖论剑”" />
             </el-form-item>
-          </el-col>
-          <el-col :xs="24" :sm="12">
             <el-form-item label="副标题">
               <el-input v-model="subtitle" placeholder="请输入副标题，如“数字安全大会”" />
             </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div v-if="posterUrl" class="poster-preview">
-        <div class="poster-result">
-          <el-input v-model="posterUrl" readonly />
-          <div class="poster-result-actions">
-            <el-button type="primary" @click="openPoster">打开海报</el-button>
-            <el-button @click="copyPosterUrl">复制链接</el-button>
+            <el-button type="primary" class="poster-submit" @click="generatePoster" :loading="generating">
+              生成海报
+            </el-button>
+          </el-form>
+          <div v-if="posterUrl" class="poster-result">
+            <el-input v-model="posterUrl" readonly />
+            <div class="poster-result-actions">
+              <el-button type="primary" @click="openPoster">打开海报</el-button>
+              <el-button @click="copyPosterUrl">复制链接</el-button>
+            </div>
           </div>
         </div>
+      </section>
+
+      <!-- 8. 参展单位 -->
+      <div v-reveal class="home-section home-reveal">
+        <ExhibitorStrip />
+      </div>
+    </div>
+
+    <!-- 9. 结尾行动区 -->
+    <section v-reveal class="closing-cta home-reveal" aria-labelledby="closing-cta-title">
+      <h2 id="closing-cta-title" class="closing-title">西湖论剑 · 数字安全大会</h2>
+      <div class="closing-actions">
+        <router-link to="/activities" class="closing-btn closing-btn--outline">探索活动</router-link>
+        <router-link to="/payment" class="closing-btn closing-btn--dark">购票</router-link>
       </div>
     </section>
 
-    <section class="feature-section">
-      <div class="feature-header">
-        <div>
-          <h2>平台能力概览</h2>
-          <p>围绕会议活动全生命周期，提供标准化却不失弹性的数字安全能力。</p>
-        </div>
-      </div>
-      <div class="feature-grid">
-        <div class="feature-card">
-          <h3>活动运营</h3>
-          <p>支持多类型活动的报名发布、席位管理和日程编排，满足大型会议的复杂运营需求。</p>
-        </div>
-        <div class="feature-card">
-          <h3>安全管控</h3>
-          <p>结合访问控制、行为审计与风控策略，降低敏感数据在活动流转中的泄露风险。</p>
-        </div>
-        <div class="feature-card">
-          <h3>数据洞察</h3>
-          <p>实时采集参会行为和互动数据，为主办方提供多维度的运营分析与复盘依据。</p>
-        </div>
-        <div class="feature-card">
-          <h3>内容协同</h3>
-          <p>统一管理议程内容、嘉宾资料与会议成果，支持多渠道分发与在线留存。</p>
+    <section v-reveal class="brand-wordmark home-reveal">
+      <div class="page-width">
+        <div
+          class="wordmark"
+          role="img"
+          aria-label="SWORD SHIELD"
+          :style="{ '--line-w': wordmarkLineWidth, '--max-w': wordmarkMaxWidth }"
+        >
+          <svg
+            v-for="(word, w) in wordmarkWords"
+            :key="w"
+            class="wordmark-word"
+            :viewBox="`0 0 ${word.width} 200`"
+            :style="{ '--word-w': word.width }"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <g
+              v-for="(glyph, i) in word.glyphs"
+              :key="i"
+              class="wordmark-glyph"
+              :transform="`translate(${glyph.x} 0)`"
+              :style="{ '--hover': glyph.hover }"
+              @pointerenter="lightGlyph"
+              @pointerleave="dimGlyph"
+            >
+              <path
+                v-for="(part, j) in glyph.paths"
+                :key="j"
+                :d="part.d"
+                :fill="part.kind === 'fill' ? 'currentColor' : 'none'"
+                :stroke="part.kind === 'fill' ? 'none' : 'currentColor'"
+                :stroke-width="wordmarkStrokeWidth[part.kind] || 0"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </g>
+          </svg>
         </div>
       </div>
     </section>
@@ -322,21 +190,45 @@
 /**
  * 首页（用户端）。
  *
- * - 复用 `Activities` / `Articles`（minimal 模式）展示热门活动与最新资讯。
- * - 登录后展示“我报名的活动”，并提供海报生成等互动入口。
+ * - 首屏使用 `ConferenceHero`，首屏以下按区块依次展示：
+ *   活动回顾、即将举办、最新资讯（含分类）、我报名的活动（登录后）、大会概览、宣传海报生成、参展单位、结尾行动区、品牌字标。
  *
  * 依赖接口（部分）：
- * - GET `/activity/list`：热门活动/轮播数据
+ * - GET `/activity/list`：活动封面、活动回顾、活动总数与倒计时
+ * - GET `/content/articles`：资讯分类统计与最新资讯
  * - GET `/activity/my-registrations`：我的报名活动
+ * - GET `/content/exhibitors`：参展单位
  * - POST `/content/poster`、GET `/content/poster/jobs/:jobId`：海报生成任务
  */
-import Activities from './Activities.vue'
-import Articles from './Articles.vue'
+import ConferenceHero from '../components/home/ConferenceHero.vue'
+import ConferenceMetrics from '../components/home/ConferenceMetrics.vue'
+import ExhibitorStrip from '../components/home/ExhibitorStrip.vue'
+import HomeActivities from '../components/home/HomeActivities.vue'
+import HomeArticles from '../components/home/HomeArticles.vue'
+import HomeSectionHead from '../components/home/HomeSectionHead.vue'
+import HomeUpcoming, { type FeaturedAgendaItem } from '../components/home/HomeUpcoming.vue'
+import Icon from '../components/ui/Icon.vue'
+import { useProgramme } from '../components/home/programme'
+import { vReveal } from '../directives/reveal'
 import { ref, onMounted, computed } from 'vue'
+
+// 字标悬停：一碰到笔画就立刻上色，离开后保持 1.2s 再淡出（再次碰到会重新计时）
+const glyphTimers = new WeakMap<Element, number>()
+function lightGlyph(e: PointerEvent) {
+  if (e.pointerType !== 'mouse') return
+  const el = e.currentTarget as Element
+  window.clearTimeout(glyphTimers.get(el))
+  el.classList.add('is-lit')
+}
+function dimGlyph(e: PointerEvent) {
+  if (e.pointerType !== 'mouse') return
+  const el = e.currentTarget as Element
+  window.clearTimeout(glyphTimers.get(el))
+  glyphTimers.set(el, window.setTimeout(() => el.classList.remove('is-lit'), 1200))
+}
 import { useRouter } from 'vue-router'
 import api from '../api'
 import { ElMessage } from 'element-plus'
-import { Loading, Trophy, Document, Download, Calendar, VideoCamera, EditPen } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -348,94 +240,101 @@ const generating = ref(false)
 const myActivities = ref<any[]>([])
 const myActivitiesTotal = ref(0)
 const myActivitiesLoading = ref(false)
+const myActivitiesError = ref('')
+
+// 页尾品牌字标：每个字母是独立的 SVG 圆润描边图形，悬停判定只落在笔画上（O/R/D 的内孔不触发）；
+// hover 为该字母悬停色，从青绿到淡靛逐字渐变，相邻字母只差一小步（纯展示，无业务逻辑）
+const wordmarkWords = [
+  {
+    width: 926,
+    glyphs: [
+      { ch: 'S', x: 0, hover: '#2DD4BF', paths: [{ d: 'M114 50C102 34 86 28 70 28C46 28 28 42 28 64C28 86 46 94 70 100C96 106 112 116 112 138C112 160 94 172 68 172C48 172 32 164 22 150', kind: 'stroke' }] },
+      { ch: 'W', x: 164, hover: '#3CD0CB', paths: [{ d: 'M28 30C30 96 38 172 70 172C96 172 102 118 107 82C112 118 118 172 144 172C176 172 184 96 186 30', kind: 'stroke' }] },
+      { ch: 'O', x: 402, hover: '#4ACDD8', paths: [{ d: 'M82 28C118 28 136 60 136 100C136 140 118 172 82 172C46 172 28 140 28 100C28 60 46 28 82 28Z', kind: 'stroke' }] },
+      { ch: 'R', x: 590, hover: '#59C9E4', paths: [{ d: 'M28 172C29 120 29 72 28 28H80C106 28 122 44 122 68C122 92 106 108 80 108H30', kind: 'stroke' }, { d: 'M76 110C104 118 120 144 126 172', kind: 'stroke' }] },
+      { ch: 'D', x: 768, hover: '#64C5EB', paths: [{ d: 'M28 28C29 76 29 124 28 172H74C110 172 130 140 130 100C130 60 110 28 74 28Z', kind: 'stroke' }] }
+    ]
+  },
+  {
+    width: 890,
+    glyphs: [
+      { ch: 'S', x: 0, hover: '#6EC0EE', paths: [{ d: 'M114 50C102 34 86 28 70 28C46 28 28 42 28 64C28 86 46 94 70 100C96 106 112 116 112 138C112 160 94 172 68 172C48 172 32 164 22 150', kind: 'stroke' }] },
+      { ch: 'H', x: 164, hover: '#77BBF2', paths: [{ d: 'M28 28C29 76 29 124 28 172', kind: 'stroke' }, { d: 'M128 28C127 76 127 124 128 172', kind: 'stroke' }, { d: 'M30 100C62 94 94 94 126 100', kind: 'stroke' }] },
+      { ch: 'I', x: 344, hover: '#81B8F6', paths: [{ d: 'M28 28C29 76 29 124 28 172', kind: 'stroke' }] },
+      { ch: 'E', x: 424, hover: '#8DB6F8', paths: [{ d: 'M104 28H64C42 28 28 42 28 64V136C28 158 42 172 64 172H104', kind: 'stroke' }, { d: 'M30 100H92', kind: 'stroke' }] },
+      { ch: 'L', x: 578, hover: '#99B5FA', paths: [{ d: 'M28 28C29 70 28 110 28 136C28 158 42 172 64 172H104', kind: 'stroke' }] },
+      { ch: 'D', x: 732, hover: '#A5B4FC', paths: [{ d: 'M28 28C29 76 29 124 28 172H74C110 172 130 140 130 100C130 60 110 28 74 28Z', kind: 'stroke' }] }
+    ]
+  }
+]
+// 桌面端整行宽度（两词 + 72 单词间距），移动端以较宽的单词为基准
+const wordmarkLineWidth = 1888
+const wordmarkStrokeWidth: Record<string, number> = { stroke: 54 }
+const wordmarkMaxWidth = 926
 
 const isLoggedIn = computed(() => {
   return !!localStorage.getItem('token')
 })
 
-// 轮播图数据 - 从后端获取热门活动
-const carouselItems = ref<any[]>([])
+const {
+  events,
+  total: eventsTotal,
+  loading: eventsLoading,
+  error: eventsError,
+  reload: reloadEvents,
+  upcoming,
+  ongoing,
+  now
+} = useProgramme()
 
-// 默认轮播图片库 - 网络安全/会议/科技主题（与活动主题匹配）
-const defaultImages = [
-  'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=450&fit=crop', // 大型会议现场 - 对应开幕式
-  'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800&h=450&fit=crop', // 网络安全主题 - 对应攻防演练
-  'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&h=450&fit=crop', // 数据隐私保护 - 对应数据安全
-  'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=450&fit=crop', // AI人工智能 - 对应AI安全
-  'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&h=450&fit=crop'  // 云计算服务器 - 对应云安全
-]
-
-// 加载轮播图活动数据
-async function loadCarouselActivities() {
-  try {
-    const { data } = await api.get('/activity/list', {
-      params: { page: 0, size: 5, orderBy: 'heat' }
-    })
-    if (data.code === 0 && data.data.items.length > 0) {
-      carouselItems.value = data.data.items.map((item: any, index: number) => ({
-        id: item.id,
-        title: item.title,
-        desc: item.summary || '点击查看活动详情',
-        tag: item.heat > 80 ? '热门活动' : item.heat > 50 ? '精选活动' : '近期活动',
-        image: item.coverUrl || defaultImages[index % defaultImages.length],
-        link: `/activity/${item.id}`
-      }))
-    }
-  } catch (error) {
-    console.error('Failed to load carousel activities:', error)
-  }
-}
-
-// 新增：静态示例的近期大会活动数据，后续可接入后端接口
-const featuredConferences = ref([
+// 近期重点大会议程（关联真实活动 ID 与 2026.11 - 2027.01 档期）
+const featuredConferences = ref<FeaturedAgendaItem[]>([
   {
-    id: undefined,
-    title: '西湖论剑 · 网络空间安全大会',
-    description: '围绕数字安全基础设施、人工智能安全与关键行业防护展开高端交流。',
+    id: 1,
+    title: '2026西湖论剑·数字安全大会开幕式暨主论坛',
+    description: '围绕大模型安全治理、智算中心防护与关键行业韧性展开年度高端交流。',
     type: '旗舰大会',
     status: 'ongoing',
-    dateRange: '正在进行 · 今日 - 本周五',
-    location: '杭州 · 国际博览中心',
-    scale: '主论坛 + 6 个分论坛 + 安全展区'
+    dateRange: '正在进行 · 11月26日 - 28日',
+    location: '杭州国际博览中心主会场',
+    scale: '主论坛 + 多场专题峰会 + 安全展区'
   },
   {
-    id: undefined,
-    title: '数字政府安全治理高峰论坛',
-    description: '聚焦政务云、城市大脑与公共服务平台的安全治理与合规实践。',
+    id: 4,
+    title: '智能网联汽车与低空经济安全高峰论坛',
+    description: '聚焦车云协同、OTA 固件验签与低空智联通信安全标准及工程实践。',
     type: '高峰论坛',
     status: 'upcoming',
-    dateRange: '即将开始 · 下周三 09:00',
-    location: '线上 + 线下联合举办',
-    scale: '预计 800+ 参会嘉宾'
+    dateRange: '即将开始 · 12月5日 09:30',
+    location: '杭州国际博览中心 C 厅',
+    scale: '预计 600+ 行业专家与车企代表'
   },
   {
-    id: undefined,
-    title: '关键基础设施安全技术闭门研讨会',
-    description: '面向能源、金融、电信等重点行业，聚焦关键基础设施安全防护能力建设。',
-    type: '闭门研讨',
+    id: 10,
+    title: '2026-2027西湖论剑·数字安全创新大赛总决赛暨颁奖典礼',
+    description: '涵盖 AI 安全挑战赛与高校创新应用赛道，现场揭晓年度特等奖并举行签约仪式。',
+    type: '年度收官',
     status: 'upcoming',
-    dateRange: '报名中 · 12 月下旬',
-    location: '上海 · 浦东新区',
-    scale: '受邀制 · 小规模深度交流'
+    dateRange: '报名中 · 2027年1月15日',
+    location: '杭州国际博览中心主会场',
+    scale: '总决赛答辩 + 颁奖盛典'
   }
 ])
 
-function getStatusText(status: string) {
-  switch (status) {
-    case 'ongoing':
-      return '进行中'
-    case 'upcoming':
-      return '即将开始'
-    case 'finished':
-      return '已结束'
-    default:
-      return '进行中'
+function activityDateParts(dateStr?: string) {
+  if (!dateStr) return { month: '时间', day: '待定' }
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return { month: '时间', day: '待定' }
+  return {
+    month: `${date.getMonth() + 1}月`,
+    day: String(date.getDate())
   }
 }
 
 function formatDateTime(dateStr: string) {
   if (!dateStr) return '时间待定'
   const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return '时间待定'
   return date.toLocaleString('zh-CN', {
     month: 'short',
     day: 'numeric',
@@ -445,17 +344,17 @@ function formatDateTime(dateStr: string) {
 }
 
 function getActivityStatus(activity: any) {
-  const now = new Date()
+  const current = new Date()
   const startTime = activity.startTime ? new Date(activity.startTime) : null
   const endTime = activity.endTime ? new Date(activity.endTime) : null
 
-  if (endTime && now > endTime) {
+  if (endTime && current > endTime) {
     return { label: '已结束', type: 'info' }
   }
-  if (startTime && now >= startTime && (!endTime || now <= endTime)) {
+  if (startTime && current >= startTime && (!endTime || current <= endTime)) {
     return { label: '进行中', type: 'success' }
   }
-  if (startTime && now < startTime) {
+  if (startTime && current < startTime) {
     return { label: '未开始', type: 'warning' }
   }
   return { label: '待定', type: '' }
@@ -477,17 +376,21 @@ async function loadMyActivities() {
   if (!isLoggedIn.value) return
 
   myActivitiesLoading.value = true
+  myActivitiesError.value = ''
   try {
     const { data } = await api.get('/activity/my-registrations', {
       params: { page: 0, size: 5 }
     })
     if (data.code === 0) {
-      myActivities.value = data.data.items
-      myActivitiesTotal.value = data.data.total
+      myActivities.value = data.data?.items || []
+      myActivitiesTotal.value = data.data?.total || 0
+    } else {
+      myActivitiesError.value = data.message || '加载已报名活动失败，请稍后重试'
     }
   } catch (error: any) {
     if (error.response?.status !== 401) {
       console.error('Failed to load registered activities:', error)
+      myActivitiesError.value = error?.message || '加载已报名活动失败，请稍后重试'
     }
   } finally {
     myActivitiesLoading.value = false
@@ -562,15 +465,7 @@ async function copyPosterUrl() {
   }
 }
 
-// 轮播图点击跳转
-function goToActivity(link: string) {
-  if (link) {
-    router.push(link)
-  }
-}
-
 onMounted(() => {
-  loadCarouselActivities()
   if (isLoggedIn.value) {
     loadMyActivities()
   }
@@ -579,860 +474,451 @@ onMounted(() => {
 
 <style scoped>
 .home-page {
-  max-width: 1240px;
-  margin: 0 auto 40px;
-  color: #111827;
+  margin: -24px -16px -40px;
+  padding-bottom: 80px;
+  background: var(--ss-bg);
+  color: #151515;
+  overflow-x: clip;
 }
 
-.hero-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 6.5fr) minmax(0, 5.5fr);
-  gap: 32px;
-  align-items: stretch;
+.home-page ul {
+  list-style: none;
 }
 
-.hero-left {
-  padding: 28px 24px;
-  border-radius: 24px;
-  background: #f5f9ff;
-  box-shadow: 0 14px 35px rgba(148, 163, 184, 0.3);
-  border: 1px solid rgba(191, 219, 254, 0.9);
+/* 首屏以下版心与区块节奏 */
+.home-below {
   display: flex;
   flex-direction: column;
+  gap: 64px;
+  width: 100%;
+  max-width: 1040px;
+  margin-inline: auto;
+  padding: 40px 20px 0;
 }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: #1d4ed8;
-  background: #e0ecff;
-  border: 1px solid rgba(147, 197, 253, 0.9);
+.home-section {
+  min-width: 0;
 }
 
-.hero-title {
-  margin-top: 18px;
-  font-size: 32px;
-  line-height: 1.3;
-  font-weight: 700;
-  color: #0f172a;
+/* 克制进入动画：透明度渐入 + 12px 位移，.6s */
+.home-reveal {
+  transition: opacity 0.6s ease-out, transform 0.6s var(--ss-ease);
 }
 
-.hero-subtitle {
-  margin-top: 16px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: #4b5563;
+.home-reveal.awaiting-reveal:not(:focus-within) {
+  opacity: 0;
+  transform: translateY(12px);
 }
 
-.hero-actions {
-  margin-top: 20px;
-  display: flex;
-  flex-wrap: wrap;
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal.awaiting-reveal:not(:focus-within) {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ================= 我报名的活动（与即将举办一致的横条卡片） ================= */
+.mine-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
-/* 新增：轮播样式 */
-.hero-carousel {
-  margin-top: 20px;
-  margin-bottom: 20px;
-}
-
-.hero-carousel :deep(.el-carousel__container) {
-  height: 340px;
-}
-
-.hero-carousel :deep(.el-carousel__indicators--outside) {
-  margin-top: 8px;
-}
-
-.hero-carousel :deep(.el-carousel__indicator--horizontal .el-carousel__button) {
-  width: 24px;
-  height: 4px;
-  border-radius: 2px;
-  background: #cbd5e1;
-}
-
-.hero-carousel :deep(.el-carousel__indicator--horizontal.is-active .el-carousel__button) {
-  background: #2563eb;
-}
-
-.hero-carousel :deep(.el-carousel__arrow) {
-  background-color: rgba(255, 255, 255, 0.9);
-  color: #1f2937;
-  width: 32px;
-  height: 32px;
-}
-
-.hero-carousel :deep(.el-carousel__arrow:hover) {
-  background-color: #ffffff;
-}
-
-.carousel-card {
+.mine-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  height: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(21, 21, 21, 0.08);
+  background: #fff;
+  color: #151515;
+  text-align: left;
   cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.carousel-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
+.mine-card:hover {
+  border-color: rgba(21, 21, 21, 0.16);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.carousel-card:hover .carousel-image {
-  transform: scale(1.05);
+.mine-date-box {
+  width: 48px;
+  height: 48px;
+  border-color: rgba(21, 21, 21, 0.1);
 }
 
-.carousel-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.3) 50%, transparent 100%);
-  display: flex;
-  align-items: flex-end;
-  padding: 20px;
-}
-
-.carousel-content {
-  color: #ffffff;
-}
-
-.carousel-tag {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 500;
-  background: rgba(59, 130, 246, 0.9);
-  margin-bottom: 8px;
-}
-
-.carousel-content h4 {
-  margin: 0 0 6px 0;
-  font-size: 18px;
+.mine-date-day {
+  font-size: 16px;
   font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  color: #151515;
 }
 
-.carousel-content p {
-  margin: 0;
-  font-size: 13px;
-  opacity: 0.9;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* 新增：快捷入口样式 */
-.quick-access {
-  margin-top: 24px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.quick-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 8px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid rgba(209, 213, 219, 0.8);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.quick-item:hover {
-  border-color: #2563eb;
-  background: #eff6ff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.15);
-}
-
-.quick-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff;
-  font-size: 20px;
-}
-
-.quick-item span {
-  font-size: 12px;
-  color: #374151;
-  font-weight: 500;
-}
-
-.hero-highlights {
-  margin-top: 24px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-
-.highlight-item {
-  min-width: 120px;
-}
-
-.highlight-number {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1d4ed8;
-}
-
-.highlight-label {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.hero-right {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.hero-card {
-  border-radius: 18px;
-  padding: 16px 16px 12px;
-  background: #ffffff;
-  border: 1px solid rgba(209, 213, 219, 0.9);
-  box-shadow: 0 8px 22px rgba(148, 163, 184, 0.32);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-  transform-origin: center;
-}
-
-.hero-card.primary {
-  border-color: rgba(59, 130, 246, 0.85);
-}
-
-.hero-card.compact {
-  padding-bottom: 10px;
-}
-
-.hero-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 32px rgba(148, 163, 184, 0.5);
-  border-color: rgba(59, 130, 246, 0.9);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.card-header h3 {
-  font-size: 14px;
-  color: #111827;
-}
-
-.card-body.scrollable {
-  max-height: 240px;
-  overflow: hidden;
-}
-
-.card-body.scrollable:hover {
-  overflow-y: auto;
-}
-
-.my-activities {
-  min-height: 80px;
-}
-
-.loading-state,
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 18px 12px;
-  color: #6b7280;
-  font-size: 13px;
-}
-
-.my-activities-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.my-activity-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 10px 8px;
-  border-radius: 12px;
-  background: #f9fafb;
-  border: 1px solid rgba(209, 213, 219, 0.9);
-  cursor: pointer;
-  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease,
-    background-color 0.18s ease;
-}
-
-.my-activity-item:hover {
-  border-color: rgba(59, 130, 246, 0.9);
-  background-color: #eff6ff;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(148, 163, 184, 0.45);
-}
-
-.activity-info {
+.mine-info {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.activity-title {
+.mine-title-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  color: #111827;
+  min-width: 0;
 }
 
-.activity-dot {
+.mine-live-dot {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 0, #22c55e, #16a34a 45%, #bbf7d0 100%);
+  border-radius: 50%;
+  background: #14b8a6;
+  flex-shrink: 0;
 }
 
-.activity-meta {
+.mine-title {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #151515;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mine-meta {
   margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 11px;
-  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #737373;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.activity-meta .channel {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #1d4ed8;
-}
-
-.view-all {
-  margin-top: 8px;
-  text-align: right;
-}
-
-.poster-section {
-  margin-top: 32px;
-  padding: 20px 20px 18px;
-  border-radius: 20px;
-  background: #f5f9ff;
-  border: 1px solid rgba(191, 219, 254, 0.9);
-  box-shadow: 0 16px 38px rgba(148, 163, 184, 0.32);
-}
-
-.poster-header {
+.mine-state {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 12px;
+  flex-wrap: wrap;
+  padding: 20px 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(21, 21, 21, 0.08);
+  background: #fff;
+  font-size: 14px;
+  color: #737373;
 }
 
-.poster-header h2 {
-  font-size: 18px;
-  color: #111827;
-}
-
-.poster-header p {
-  margin-top: 4px;
+.mine-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(21, 21, 21, 0.14);
+  background: #fff;
+  color: #151515;
   font-size: 13px;
-  color: #4b5563;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.poster-actions {
+.mine-btn:hover {
+  border-color: rgba(21, 21, 21, 0.28);
+  background: rgba(21, 21, 21, 0.03);
+}
+
+.mine-btn--dark {
+  border-color: #151515;
+  background: #151515;
+  color: #fff;
+}
+
+.mine-btn--dark:hover {
+  border-color: #2b2b2b;
+  background: #2b2b2b;
+}
+
+.skeleton-card {
+  pointer-events: none;
+}
+
+.sk-date-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
   flex-shrink: 0;
 }
 
-.poster-form {
+.sk-line-1 {
+  width: 80%;
+  height: 16px;
+}
+
+.sk-line-2 {
+  width: 60%;
+  height: 13px;
   margin-top: 8px;
 }
 
-.poster-preview {
-  margin-top: 16px;
-  padding: 14px;
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid rgba(209, 213, 219, 0.9);
-  box-shadow: 0 12px 30px rgba(148, 163, 184, 0.45);
+/* ================= 宣传海报生成（白卡片 + 细描边） ================= */
+.poster-panel {
+  padding: 24px 28px;
+  border-radius: 16px;
+  border: 1px solid rgba(21, 21, 21, 0.08);
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.poster-panel:hover {
+  border-color: rgba(21, 21, 21, 0.16);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.poster-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #737373;
+}
+
+.poster-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.poster-form :deep(.el-form-item) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0;
+}
+
+.poster-form :deep(.el-form-item__label) {
+  justify-content: flex-start;
+  height: auto;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #151515;
+}
+
+.poster-form :deep(.el-input__wrapper) {
+  min-height: 40px;
+  background: #fff;
+}
+
+.poster-submit {
+  height: 40px;
+}
+
+.poster-panel :deep(.el-button--primary) {
+  border-radius: 10px;
+  --el-button-bg-color: #151515;
+  --el-button-border-color: #151515;
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: #2a2a2a;
+  --el-button-hover-border-color: #2a2a2a;
+  --el-button-hover-text-color: #ffffff;
+  --el-button-active-bg-color: #151515;
+  --el-button-active-border-color: #151515;
+  --el-button-active-text-color: #ffffff;
+  background-color: #151515;
+  border-color: #151515;
+  color: #ffffff;
+}
+
+.poster-panel :deep(.el-button--primary:hover),
+.poster-panel :deep(.el-button--primary:focus-visible) {
+  background-color: #2a2a2a;
+  border-color: #2a2a2a;
+  color: #ffffff;
 }
 
 .poster-result {
-  display: grid;
+  display: flex;
   gap: 12px;
+  margin-top: 16px;
 }
 
 .poster-result-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.feature-section {
-  margin-top: 32px;
-  padding: 20px 20px 24px;
-  border-radius: 20px;
-  background: #ffffff;
-  border: 1px solid rgba(209, 213, 219, 0.9);
-  box-shadow: 0 12px 32px rgba(148, 163, 184, 0.28);
-}
-
-.feature-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.feature-header h2 {
-  font-size: 18px;
-  color: #111827;
-}
-
-.feature-header p {
-  margin-top: 4px;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.feature-card {
-  padding: 14px 14px 12px;
-  border-radius: 14px;
-  background: #f9fafb;
-  border: 1px solid rgba(229, 231, 235, 0.9);
-  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease,
-    border-color 0.18s ease;
-}
-
-.feature-card:hover {
-  background: #eff6ff;
-  border-color: rgba(59, 130, 246, 0.8);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(148, 163, 184, 0.35);
-}
-
-.feature-card h3 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 6px;
-}
-
-.feature-card p {
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 1.6;
-}
-
-/* 新增：近期大会活动区块样式 */
-.conference-section {
-  margin-top: 32px;
-  padding: 22px 20px 24px;
-  border-radius: 22px;
-  background: radial-gradient(circle at top left, #e0ecff 0, #ffffff 40%, #eef2ff 100%);
-  border: 1px solid rgba(191, 219, 254, 0.9);
-  box-shadow: 0 18px 42px rgba(148, 163, 184, 0.38);
-}
-
-.conference-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: flex-end;
-  margin-bottom: 18px;
-}
-
-.section-label {
-  display: inline-flex;
-  padding: 3px 10px;
-  font-size: 11px;
-  border-radius: 999px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #1d4ed8;
-  background: rgba(191, 219, 254, 0.8);
-  border: 1px solid rgba(147, 197, 253, 0.9);
-}
-
-.conference-header h2 {
-  margin-top: 10px;
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.conference-header p {
-  margin-top: 6px;
-  font-size: 13px;
-  color: #4b5563;
-  max-width: 520px;
-}
-
-.conference-cta {
+  gap: 8px;
   flex-shrink: 0;
 }
 
-.conference-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  gap: 20px;
-}
-
-.conference-main {
-  padding: 16px 18px 10px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(209, 213, 219, 0.9);
-}
-
-.conference-timeline {
-  list-style: none;
-  padding: 0;
+.poster-result-actions .el-button {
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
-.conference-item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-  padding: 10px 10px 8px;
-  border-radius: 14px;
-  background: #f9fafb;
-  border: 1px solid rgba(229, 231, 235, 0.9);
-  transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease,
-    transform 0.18s ease;
+/* ================= 结尾行动区 ================= */
+.closing-cta {
+  width: 100%;
+  max-width: 1040px;
+  margin-inline: auto;
+  padding: 112px 20px 48px;
+  text-align: center;
 }
 
-.conference-item:hover {
-  background: #eff6ff;
-  border-color: rgba(59, 130, 246, 0.9);
-  box-shadow: 0 12px 26px rgba(148, 163, 184, 0.42);
-  transform: translateY(-3px);
-}
-
-.timeline-node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 4px;
-}
-
-.timeline-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: conic-gradient(from 160deg, #1d4ed8, #22c55e, #0ea5e9, #1d4ed8);
-  box-shadow: 0 0 0 3px rgba(191, 219, 254, 0.9);
-}
-
-.timeline-line {
-  flex: 1;
-  width: 2px;
-  margin-top: 4px;
-  background: linear-gradient(to bottom, rgba(191, 219, 254, 0.9), rgba(209, 213, 219, 0));
-}
-
-.conference-content {
-  min-width: 0;
-}
-
-.conference-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.conference-tag {
-  padding: 2px 8px;
-  font-size: 11px;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #1d4ed8;
-}
-
-.conference-status {
-  padding: 2px 8px;
-  font-size: 11px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.9);
-  color: #4b5563;
-}
-
-.conference-status[data-status='ongoing'] {
-  background: #dcfce7;
-  border-color: #22c55e;
-  color: #166534;
-}
-
-.conference-status[data-status='upcoming'] {
-  background: #fef9c3;
-  border-color: #facc15;
-  color: #854d0e;
-}
-
-.conference-status[data-status='finished'] {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-  color: #374151;
-}
-
-.conference-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.conference-desc {
-  margin-top: 4px;
-  font-size: 13px;
-  color: #6b7280;
-  line-height: 1.6;
-}
-
-.conference-meta {
-  margin-top: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.meta-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  color: #4b5563;
-  background: rgba(243, 244, 246, 0.95);
-}
-
-.meta-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: #cbd5f5;
-}
-
-.meta-dot.primary {
-  background: #2563eb;
-}
-
-.conference-side {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.side-card {
-  padding: 14px 14px 12px;
-  border-radius: 16px;
-  background: rgba(15, 23, 42, 0.96);
-  color: #e5e7eb;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.6);
-}
-
-.side-card.secondary {
-  background: #f9fafb;
-  color: #111827;
-  box-shadow: 0 10px 26px rgba(148, 163, 184, 0.45);
-}
-
-.side-card h3 {
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
-.side-metrics {
-  list-style: none;
-  padding: 0;
+.closing-title {
+  display: inline-block;
+  max-width: 100%;
   margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  font-family: 'Noto Sans SC', var(--ss-font);
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: #151515;
 }
 
-.metric-label {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.metric-value {
-  margin-top: 2px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.metric-accent {
-  color: #60a5fa;
-}
-
-.side-actions {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.side-actions li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 10px 8px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: background-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.side-actions li:hover {
-  background: #eff6ff;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(148, 163, 184, 0.45);
-}
-
-.action-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #e5e7eb;
+.closing-actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: #6b7280;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
 }
 
-.action-icon-primary {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  color: #ffffff;
-}
-
-.action-icon-secondary {
-  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
-  color: #ffffff;
-}
-
-.action-icon-tertiary {
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
-  color: #ffffff;
-}
-
-.action-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.action-title {
-  font-size: 13px;
+.closing-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 500;
+  white-space: nowrap;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
-.action-desc {
-  margin-top: 2px;
-  font-size: 12px;
-  color: #6b7280;
+.closing-btn--outline {
+  border: 1px solid rgba(21, 21, 21, 0.16);
+  background: #fff;
+  color: #151515;
 }
 
+.closing-btn--outline:hover {
+  border-color: rgba(21, 21, 21, 0.32);
+  background: rgba(21, 21, 21, 0.03);
+}
+
+.closing-btn--dark {
+  border: 1px solid #151515;
+  background: #151515;
+  color: #fff;
+}
+
+.closing-btn--dark:hover {
+  border-color: #2b2b2b;
+  background: #2b2b2b;
+}
+
+/* ================= 页尾字标（保留） ================= */
+.page-width {
+  width: min(calc(100% - 64px), 1192px);
+  margin-inline: auto;
+}
+.brand-wordmark {
+  margin: 96px 0 -80px;
+  padding-block: 72px 64px;
+  background: var(--ss-navy);
+  overflow: hidden;
+}
+.wordmark {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.wordmark-word {
+  display: block;
+  /* 按整行宽度等比分配，两词之间留出单词间距 */
+  width: calc(var(--word-w) / var(--line-w) * 100%);
+  height: auto;
+  overflow: visible;
+}
+/* 只有字母的实心部分（填充/描边）响应鼠标，字母之间、O/D/R 的内孔、L 拐角的空白都不触发 */
+.wordmark-glyph {
+  color: #fff;
+  transition: color .9s cubic-bezier(.22, .61, .36, 1);
+}
+@media (hover: hover) {
+  .wordmark-glyph.is-lit {
+    color: var(--hover, var(--ss-teal));
+    transition-duration: .4s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-glyph {
+    transition-duration: 0s;
+  }
+}
+
+/* ================= 响应式 ================= */
 @media (max-width: 960px) {
-  .hero-panel {
-    grid-template-columns: minmax(0, 1fr);
+  .mine-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .hero-left {
-    min-height: auto;
+@media (max-width: 768px) {
+  .home-page {
+    margin: -16px -12px -32px;
+    padding-bottom: 48px;
   }
-
-  .hero-right {
-    order: -1;
+  .page-width {
+    width: calc(100% - 40px);
   }
-
-  .conference-layout {
-    grid-template-columns: minmax(0, 1fr);
+  .brand-wordmark {
+    margin: 56px 0 -48px;
+    padding-block: 40px 36px;
   }
-
-  .quick-access {
-    grid-template-columns: repeat(4, 1fr);
+  .wordmark {
+    flex-direction: column;
+    gap: 10px;
+  }
+  /* 两行使用同一缩放比例，字母大小一致；较宽的单词占容器约 70%，避免手机上过大 */
+  .wordmark-word {
+    width: calc(var(--word-w) / var(--max-w) * 70%);
   }
 }
 
 @media (max-width: 640px) {
-  .hero-left {
-    padding: 22px 18px;
+  .home-below {
+    gap: 48px;
+    padding-top: 28px;
   }
 
-  .hero-title {
-    font-size: 24px;
-  }
-
-  .hero-carousel {
-    min-height: 200px;
-  }
-
-  .quick-access {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .conference-section {
-    padding-inline: 16px;
-  }
-
-  .conference-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .conference-cta {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-  }
-
-  .conference-side {
-    flex-direction: column;
-  }
-
-  .poster-section,
-  .feature-section {
-    padding-inline: 16px;
-  }
-
-  .feature-grid {
+  .mine-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .poster-panel {
+    padding: 20px;
+  }
+
+  .poster-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .poster-result {
+    flex-direction: column;
+  }
+
+  .closing-title {
+    font-size: 28px;
   }
 }
 </style>

@@ -1,14 +1,14 @@
 <template>
   <div class="admin-materials-page">
     <h2 class="page-title">
-      <el-icon class="title-icon"><Document /></el-icon>
+      <Icon name="file-text" :size="22" class="title-icon" />
       资料管理
     </h2>
     <p class="page-subtitle">上传并发布大会资料（PPT、PDF 等）</p>
 
     <el-card class="upload-card">
       <h3>
-        <el-icon class="heading-icon"><Upload /></el-icon>
+        <Icon name="upload" :size="18" class="heading-icon" />
         上传资料
       </h3>
       <el-form :model="form" label-width="120px" class="upload-form">
@@ -28,13 +28,13 @@
             :limit="1"
             accept=".ppt,.pptx,.pdf,application/*"
           >
-            <el-button type="primary" :icon="Upload">选择文件</el-button>
+            <el-button type="primary"><Icon name="upload" :size="15" style="margin-right: 4px" />选择文件</el-button>
             <template #tip>
               <div class="el-upload__tip">支持 PPT / PPTX / PDF 等格式</div>
             </template>
           </el-upload>
           <div v-if="selectedFile" class="file-info">
-            <el-icon class="status-icon"><CircleCheck /></el-icon>
+            <Icon name="check-circle" :size="16" class="status-icon" />
             已选择: {{ selectedFile.name }}
           </div>
         </el-form-item>
@@ -42,7 +42,7 @@
         <el-form-item>
           <el-button type="primary" @click="submitMaterial" :loading="uploading" size="large">
             <span v-if="!uploading">
-              <el-icon class="btn-icon"><Promotion /></el-icon>
+              <Icon name="send" :size="15" class="btn-icon" />
               上传并发布
             </span>
             <span v-else>上传中...</span>
@@ -55,7 +55,7 @@
     <el-card class="list-card">
       <div class="list-header">
         <h3>
-          <el-icon class="heading-icon"><List /></el-icon>
+          <Icon name="list" :size="18" class="heading-icon" />
           已发布资料
         </h3>
       </div>
@@ -110,7 +110,7 @@
  */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Upload } from '@element-plus/icons-vue'
+import Icon from '../../components/ui/Icon.vue'
 import adminApi from '../../adminApi'
 
 const form = reactive({

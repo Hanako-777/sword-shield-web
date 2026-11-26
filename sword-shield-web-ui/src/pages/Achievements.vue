@@ -1,9 +1,6 @@
 <template>
   <div class="page">
-    <h2 class="title">
-      <el-icon class="title-icon"><Trophy /></el-icon>
-      成果展示
-    </h2>
+    <h2 class="title">成果展示</h2>
     <el-row :gutter="16">
       <el-col :span="8" v-for="a in list" :key="a.id">
         <el-card class="card">
@@ -53,9 +50,8 @@ onMounted(() => load(1))
 
 <style scoped>
 .page { max-width: 1200px; margin: 0 auto; }
-.title { margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-.title-icon { color: #e6a23c; }
-.card { border-radius: 16px; margin-bottom: 16px; }
+.title { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #d8e0e5; font-size: 26px; font-weight: 700; color: #0b2545; }
+.card { border-radius: 8px; border: 1px solid #d8e0e5; margin-bottom: 16px; }
 .name { margin: 8px 0; }
 .desc { color: #444; margin: 6px 0; min-height: 48px; }
 .actions { margin-top: 8px; }

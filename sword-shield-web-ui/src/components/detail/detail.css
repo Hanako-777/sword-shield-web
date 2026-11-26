@@ -1,0 +1,9 @@
+/* Imported with <style scoped src> by the three detail and checkout views. */
+.reveal { transition: opacity .45s ease-out, transform .45s var(--ss-ease); }
+.reveal.awaiting-reveal:not(:focus-within) { opacity: 0; transform: translateY(12px); }
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal.awaiting-reveal:not(:focus-within) { transition: none; opacity: 1; transform: none; }
+}
+@media (max-width: 640px) {
+  .el-button, .touch-link, :deep(.el-dialog__headerbtn) { min-width: 44px; min-height: 44px; }
+}

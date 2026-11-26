@@ -1,10 +1,11 @@
 <template>
   <div class="auth-page">
     <div class="auth-card">
-      <router-link class="auth-switch" to="/admin/login">后台登录</router-link>
       <div class="auth-header">
-        <div class="auth-tag">前台登录</div>
-        <h1 class="auth-title">登录 西湖论剑 账号</h1>
+        <div class="auth-top-row">
+          <h1 class="auth-title">登录西湖论剑</h1>
+          <router-link class="auth-switch" to="/admin/login">管理后台 →</router-link>
+        </div>
         <p class="auth-subtitle">用于报名活动、下载资料和查看个人信息。</p>
       </div>
       <el-form :model="form" @submit.prevent="login" class="auth-form">
@@ -125,91 +126,52 @@ async function login() {
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
-  background: radial-gradient(circle at top, #e3eeff 0, #f3f6fb 45%, #eef2f7 100%);
+  background: #f6f8fa;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 440px;
   padding: 32px 32px 28px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  position: relative;
-}
-
-.auth-switch {
-  position: absolute;
-  top: 18px;
-  right: 18px;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 14px 12px;
-  border-radius: 10px 10px 6px 6px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-decoration: none;
-  font-weight: 600;
-  color: #1d4ed8;
-  background: rgba(219, 234, 254, 0.95);
-  box-shadow: 0 8px 18px rgba(30, 64, 175, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
-}
-
-.auth-switch::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -10px;
-  margin: 0 auto;
-  width: 0;
-  height: 0;
-  border-left: 18px solid transparent;
-  border-right: 18px solid transparent;
-  border-top: 10px solid rgba(219, 234, 254, 0.95);
-}
-
-.auth-switch:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 22px rgba(30, 64, 175, 0.26);
-}
-
-.auth-switch:active {
-  transform: translateY(0);
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d8e0e5;
+  box-shadow: 0 4px 16px rgba(11, 37, 69, 0.06);
 }
 
 .auth-header {
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
-.auth-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #1d4ed8;
-  background: rgba(219, 234, 254, 0.95);
+.auth-top-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-switch {
+  font-size: 13px;
+  color: #506273;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.auth-switch:hover {
+  color: #0b2545;
+  text-decoration: underline;
 }
 
 .auth-title {
-  margin-top: 14px;
   font-size: 22px;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: #0b2545;
 }
 
 .auth-subtitle {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 13px;
-  color: #6b7280;
+  color: #506273;
 }
 
 .auth-form {
@@ -218,16 +180,21 @@ async function login() {
 
 .auth-button {
   width: 100%;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 40%, #0f172a 100%);
-  border: none;
+  background: #0b2545;
+  border-color: #0b2545;
   font-size: 15px;
   font-weight: 600;
+}
+
+.auth-button:hover {
+  background: #183a63;
+  border-color: #183a63;
 }
 
 .auth-footer {
   text-align: center;
   margin-top: 8px;
-  color: #6b7280;
+  color: #506273;
   font-size: 13px;
 }
 </style>

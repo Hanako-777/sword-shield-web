@@ -2,11 +2,8 @@
   <div class="submissions-page">
     <div class="page-header">
       <div class="title-wrap">
-        <h2 class="page-title">
-          <el-icon class="title-icon"><ChatLineSquare /></el-icon>
-          用户投稿
-        </h2>
-        <p class="page-desc">展示已通过审核的用户投稿内容。</p>
+        <h2 class="page-title">用户投稿</h2>
+        <p class="page-desc">已通过审核的参会者投稿内容</p>
       </div>
       <el-button type="primary" @click="$router.push('/submit')">
         在线投稿
@@ -65,7 +62,6 @@
  */
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChatLineSquare } from '@element-plus/icons-vue'
 import api from '../api'
 
 type Submission = {
@@ -164,46 +160,44 @@ onMounted(fetchList)
 
 .page-header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin: 6px 8px 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #d8e0e5;
 }
 
 .page-title {
-  font-size: 28px;
-  color: #333;
+  font-size: 26px;
+  font-weight: 700;
+  color: #0b2545;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.title-icon {
-  color: #409eff;
 }
 
 .page-desc {
   margin: 6px 0 0;
-  color: #6b7280;
+  font-size: 14px;
+  color: #506273;
 }
 
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
+  gap: 20px;
 }
 
 .submission-card {
   cursor: pointer;
-  transition: all 0.3s;
-  border-radius: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
   overflow: hidden;
 }
 
 .submission-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.14);
+  border-color: #94a3b8;
+  box-shadow: 0 6px 18px rgba(11, 37, 69, 0.08);
 }
 
 .cover-wrap {

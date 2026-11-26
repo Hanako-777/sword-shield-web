@@ -1,0 +1,496 @@
+/**
+ * 全局基础样式 + Element Plus 组件统一外观 + 通用工具类（ss- 前缀）
+ *
+ * - 只放跨页面共用的规则；页面自身的布局写在各页面的 scoped 样式里。
+ * - Element 组件多数会被挂载到 body（弹窗、下拉、消息），所以这里的覆盖必须是全局的。
+ */
+
+/* ============ 基础 ============ */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 96px;
+  overflow-x: clip;
+}
+
+body {
+  font-family: var(--ss-font);
+  font-size: var(--ss-fs-body);
+  line-height: 1.6;
+  color: var(--ss-ink);
+  background: var(--ss-bg);
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--ss-ink);
+  font-weight: 600;
+  letter-spacing: var(--ss-tracking-tight);
+  line-height: 1.3;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(21, 21, 21, 0.55);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(21, 21, 21, 0.14);
+}
+
+/* ============ Element Plus 统一外观 ============ */
+
+/* 按钮：圆角矩形（常规 10px、小号 8px、大号 12px） */
+.el-button {
+  border-radius: 10px;
+  font-weight: 500;
+  transition: background-color var(--ss-dur) var(--ss-ease), border-color var(--ss-dur) var(--ss-ease),
+    color var(--ss-dur) var(--ss-ease);
+}
+.el-button:focus:not(:focus-visible) {
+  outline: none;
+}
+.el-button:focus-visible {
+  outline: 2px solid rgba(21, 21, 21, 0.55);
+  outline-offset: 2px;
+}
+.el-button.is-circle {
+  border-radius: 10px;
+}
+.el-button + .el-button {
+  margin-left: 8px;
+}
+/* 默认按钮（未指定 type）：5% 灰底、无描边。注意 size 修饰类也带 el-button-- 前缀，所以逐个排除 type */
+.el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info):not(.is-text):not(.is-link):not(.is-plain) {
+  --el-button-bg-color: var(--ss-fill);
+  --el-button-border-color: transparent;
+  --el-button-text-color: var(--ss-ink);
+  --el-button-hover-bg-color: var(--ss-fill-hover);
+  --el-button-hover-border-color: transparent;
+  --el-button-hover-text-color: var(--ss-ink);
+  --el-button-active-bg-color: rgba(19, 26, 36, 0.12);
+  --el-button-active-border-color: transparent;
+}
+.el-button.is-plain:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(.el-button--danger):not(.el-button--info) {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: var(--ss-line-strong);
+  --el-button-hover-bg-color: var(--ss-row-hover);
+  --el-button-hover-border-color: var(--ss-line-strong);
+  --el-button-hover-text-color: var(--ss-ink);
+}
+.el-button--primary {
+  --el-button-hover-bg-color: var(--ss-navy-hover);
+  --el-button-hover-border-color: var(--ss-navy-hover);
+  --el-button-active-bg-color: var(--ss-navy-press);
+  --el-button-active-border-color: var(--ss-navy-press);
+}
+.el-button--primary.is-plain {
+  --el-button-bg-color: transparent;
+  --el-button-text-color: var(--ss-navy);
+  --el-button-border-color: color-mix(in srgb, var(--ss-navy) 35%, transparent);
+  --el-button-hover-bg-color: var(--el-color-primary-light-9);
+  --el-button-hover-text-color: var(--ss-navy);
+  --el-button-hover-border-color: var(--ss-navy);
+}
+.el-button.is-text,
+.el-button.is-link {
+  border-radius: var(--ss-r-sm);
+}
+.el-button--large {
+  --el-button-size: 44px;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+.el-button--small {
+  --el-button-size: 30px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+}
+
+/* 输入框、下拉、文本域 */
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-date-editor.el-input__wrapper {
+  border-radius: var(--ss-r-md);
+}
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px rgba(21, 21, 21, 0.45) inset;
+}
+.el-input--large .el-input__wrapper,
+.el-select--large .el-select__wrapper {
+  min-height: 44px;
+}
+.el-textarea__inner {
+  padding: 10px 14px;
+}
+
+/* 卡片：细边、无阴影、20px 圆角 */
+.el-card {
+  --el-card-border-color: var(--ss-line);
+  --el-card-border-radius: var(--ss-r-lg);
+  border-radius: var(--ss-r-lg);
+}
+.el-card.is-always-shadow,
+.el-card.is-hover-shadow:hover {
+  box-shadow: none;
+}
+
+/* 标签：6px 圆角、无描边、偏中性 */
+.el-tag {
+  border-radius: 6px;
+  border-color: transparent;
+  font-weight: 500;
+}
+.el-tag--info {
+  --el-tag-bg-color: var(--ss-fill);
+  --el-tag-text-color: var(--ss-ink-2);
+}
+
+/* 弹窗 / 消息框 */
+.el-dialog {
+  --el-dialog-border-radius: var(--ss-r-lg);
+  border-radius: var(--ss-r-lg);
+  box-shadow: var(--ss-shadow-pop);
+}
+.el-dialog__title {
+  font-weight: 600;
+  letter-spacing: var(--ss-tracking-tight);
+}
+.el-message-box {
+  border-radius: var(--ss-r-lg);
+  padding: 20px;
+}
+.el-message,
+.el-notification {
+  border-radius: var(--ss-r-md);
+  box-shadow: var(--ss-shadow-pop);
+}
+
+/* 浮层：下拉菜单、选择器面板、提示 */
+.el-popper.is-light {
+  border-radius: var(--ss-r-md);
+  border-color: var(--ss-line);
+  box-shadow: var(--ss-shadow-pop);
+}
+.el-dropdown-menu {
+  padding: 6px;
+}
+.el-dropdown-menu__item {
+  border-radius: var(--ss-r-sm);
+  padding: 8px 12px;
+  font-size: 14px;
+}
+.el-select-dropdown__item {
+  border-radius: var(--ss-r-sm);
+  margin: 0 6px;
+}
+
+/* 分页：圆角矩形页码 */
+.el-pagination {
+  --el-pagination-border-radius: 8px;
+  --el-pagination-button-bg-color: transparent;
+  justify-content: center;
+}
+.el-pagination .el-pager li,
+.el-pagination .btn-prev,
+.el-pagination .btn-next {
+  border-radius: 8px;
+}
+.el-pagination.is-background .el-pager li:not(.is-active):not(.is-disabled),
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .btn-next {
+  background: transparent;
+}
+
+/* 表格：浅灰表头、细分隔线、行悬停浅灰 */
+.el-table {
+  --el-table-border-color: var(--ss-line);
+  --el-table-header-bg-color: var(--ss-bg-soft);
+  --el-table-header-text-color: var(--ss-muted);
+  --el-table-row-hover-bg-color: var(--ss-row-hover);
+  --el-table-text-color: var(--ss-ink-2);
+  border-radius: var(--ss-r-md);
+}
+.el-table th.el-table__cell {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* 其他：分段单选外框 10px，选中块 8px */
+.el-divider--horizontal {
+  border-top-color: var(--ss-line);
+}
+.el-radio-group {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--ss-fill);
+}
+.el-radio-button__inner {
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent;
+  box-shadow: none !important;
+}
+.el-radio-button:first-child .el-radio-button__inner {
+  border-radius: 8px !important;
+}
+.el-radio-button:last-child .el-radio-button__inner {
+  border-radius: 8px !important;
+}
+.el-empty__description p {
+  color: var(--ss-muted);
+}
+
+/* ============ 通用工具类 ============ */
+
+.ss-container {
+  width: min(100% - 48px, var(--ss-w-wide));
+  margin-inline: auto;
+}
+.ss-container--narrow {
+  width: min(100% - 48px, var(--ss-w-narrow));
+}
+.ss-container--read {
+  width: min(100% - 48px, var(--ss-w-read));
+}
+
+/* 页面标题区：28px/600 标题 + 灰色副标题 */
+.ss-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 40px 0 24px;
+}
+.ss-page-title {
+  font-size: var(--ss-fs-h2);
+  font-weight: 600;
+  line-height: 1.25;
+}
+.ss-page-sub {
+  margin-top: 6px;
+  color: var(--ss-muted);
+  font-size: 15px;
+}
+
+/* 区块标题：20px/600，右侧可放“查看全部”胶囊 */
+.ss-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.ss-section-title {
+  font-size: var(--ss-fs-h3);
+  font-weight: 600;
+}
+
+/* 圆角按钮 / 筛选标签 */
+.ss-pill,
+.ss-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--ss-fill);
+  color: var(--ss-muted);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--ss-dur) var(--ss-ease), color var(--ss-dur) var(--ss-ease);
+}
+.ss-pill:hover,
+.ss-chip:hover {
+  background: var(--ss-fill-hover);
+  color: var(--ss-ink);
+}
+.ss-chip.is-active {
+  background: var(--ss-navy);
+  color: #fff;
+}
+
+/* 状态点：进行中=青绿（带呼吸光圈）、即将开始=藏青、已结束=灰 */
+.ss-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ss-subtle);
+  flex-shrink: 0;
+}
+.ss-dot--live {
+  background: var(--ss-teal);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ss-teal) 22%, transparent);
+}
+.ss-dot--soon {
+  background: var(--ss-navy);
+}
+
+/* 状态文字标签（6px 圆角） */
+.ss-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--ss-fill);
+  color: var(--ss-ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ss-badge--live {
+  background: var(--ss-teal-soft);
+  color: var(--ss-teal-ink);
+}
+
+/* 列表行：悬停浅灰底、标题变主色，不上浮 */
+.ss-row {
+  border-radius: var(--ss-r-md);
+  transition: background-color var(--ss-dur) var(--ss-ease);
+}
+.ss-row:hover {
+  background: var(--ss-row-hover);
+}
+
+/* 日历小方块：月 / 日 */
+.ss-date-block {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 48px;
+  border: 1px solid var(--ss-line-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #fff;
+}
+.ss-date-block__m {
+  width: 100%;
+  padding: 2px 0;
+  background: var(--ss-fill);
+  color: var(--ss-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.ss-date-block__d {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ss-ink);
+}
+
+/* 骨架屏 */
+.ss-skeleton {
+  border-radius: var(--ss-r-sm);
+  background: linear-gradient(90deg, #f1f2f4 25%, #e9ebee 37%, #f1f2f4 63%);
+  background-size: 400% 100%;
+  animation: ss-shimmer 1.4s ease infinite;
+}
+@keyframes ss-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* 路由切换淡入（只用透明度，不用 transform，避免影响页面内的 fixed 元素） */
+.ss-route {
+  animation: ss-fade-in 200ms var(--ss-ease) both;
+}
+@keyframes ss-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 屏幕阅读器专用 */
+.ss-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  .ss-container,
+  .ss-container--narrow,
+  .ss-container--read {
+    width: calc(100% - 32px);
+  }
+  .ss-page-head {
+    padding: 28px 0 18px;
+  }
+  .ss-page-title {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

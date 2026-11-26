@@ -1,80 +1,62 @@
 <template>
   <div class="payment-container">
-    <div class="page-hero">
-      <h1>大会购票与资料包</h1>
-      <p>在线下单 → 模拟收银台 → 支付回调，完整演示订单状态流转与幂等处理</p>
+    <header class="page-hero">
+      <h1>大会购票与资料包</h1><p>选择门票或会议资料包，在线完成下单与支付</p>
+    </header>
+    <CheckoutSteps :step="cashierOpen ? (current?.status === 'PAID' ? 3 : 2) : selected ? 1 : 0" />
+    <div class="checkout-layout">
+      <section v-reveal class="reveal" aria-labelledby="ticket-heading">
+        <h2 id="ticket-heading">选择票种</h2>
+        <ReadState v-if="productsLoading || productsError || !products.length" :loading="productsLoading"
+          :error="productsError" empty="暂无商品" @retry="loadProducts" />
+        <fieldset v-else class="choices"><legend class="ss-sr-only">选择票种</legend>
+          <label v-for="p in products" :key="p.id" class="ticket" :class="{ selected: selectedId === p.id, sold: p.stock != null && p.stock <= 0 }">
+            <input type="radio" name="product" v-model="selectedId" :value="p.id" :disabled="(p.stock != null && p.stock <= 0) || placing" />
+            <span class="ticket-info"><span class="ss-badge">{{ typeLabel(p.type) }}</span>
+              <b>{{ p.name }}</b><span class="description">{{ p.description }}</span>
+            </span>
+            <span class="ticket-price"><b>¥{{ p.price }}</b><small>余量 {{ p.stock ?? '不限' }}</small></span>
+            <span class="mark" aria-hidden="true"><Icon v-if="selectedId === p.id" name="check" :size="13" /></span>
+          </label>
+        </fieldset>
+      </section>
+      <aside class="summary">
+        <h2>订单小结</h2>
+        <dl><div><dt>所选票种</dt><dd>{{ selected?.name || '待选择' }}</dd></div>
+          <div><dt>数量</dt><dd>1</dd></div>
+          <div class="total"><dt>合计</dt><dd>{{ selected ? '¥' + selected.price : '—' }}</dd></div></dl>
+        <el-button type="primary" :disabled="!selected" :loading="placing" @click="buySelected">立即购买</el-button>
+        <router-link v-if="isLoggedIn" to="/orders" class="summary-orders-link">
+          查看我的订单 →
+        </router-link>
+      </aside>
     </div>
-
-    <el-row :gutter="20" class="product-grid">
-      <el-col v-for="p in products" :key="p.id" :xs="24" :sm="12" :md="8">
-        <el-card class="product-card" shadow="hover">
-          <div class="product-type">{{ typeLabel(p.type) }}</div>
-          <h3 class="product-name">{{ p.name }}</h3>
-          <p class="product-desc">{{ p.description }}</p>
-          <div class="product-footer">
-            <div class="price">¥<span>{{ p.price }}</span></div>
-            <div class="stock">余量 {{ p.stock }}</div>
-          </div>
-          <el-button type="primary" class="buy-btn" @click="buy(p)">立即购买</el-button>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-card v-if="isLoggedIn" class="orders-card" shadow="never">
-      <div class="orders-head">
-        <h2>我的订单</h2>
-        <el-button text @click="loadOrders">刷新</el-button>
-      </div>
-      <el-table :data="orders" stripe style="width: 100%">
-        <el-table-column prop="orderNo" label="订单号" min-width="200" />
-        <el-table-column prop="productName" label="商品" min-width="160" />
-        <el-table-column label="金额" width="110">
-          <template #default="{ row }">¥{{ row.amount }}</template>
-        </el-table-column>
-        <el-table-column label="状态" width="110">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="下单时间" min-width="170">
-          <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
-          <template #default="{ row }">
-            <el-button v-if="row.status === 'CREATED'" size="small" type="primary" @click="openCashier(row)">
-              去支付
-            </el-button>
-            <span v-else class="paid-text">已完成</span>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div v-if="!orders.length" class="empty">还没有订单，先选一个商品试试吧</div>
-    </el-card>
-
-    <el-alert v-else type="info" :closable="false" class="login-tip">
-      登录后即可下单并查看「我的订单」。演示账号：demo / 123456
+    <el-alert v-if="!isLoggedIn" type="info" :closable="false" class="login-tip">
+      登录后即可下单并在「账户 → 我的订单」中查看记录。演示账号：demo / 123456
     </el-alert>
-
-    <el-dialog v-model="cashierOpen" title="收银台（模拟支付）" width="460px" destroy-on-close>
+    <el-dialog v-model="cashierOpen" title="收银台（模拟支付）" width="min(460px, calc(100% - 24px))" destroy-on-close>
       <div v-if="current" class="cashier">
+        <CheckoutSteps :step="current.status === 'PAID' ? 3 : 2" />
         <div class="cashier-row"><span>订单号</span><b>{{ current.orderNo }}</b></div>
         <div class="cashier-row"><span>商品</span><b>{{ current.productName }}</b></div>
         <div class="cashier-row"><span>应付金额</span><b class="amount">¥{{ current.amount }}</b></div>
         <div class="cashier-row"><span>订单状态</span>
           <el-tag :type="statusType(current.status)" size="small">{{ statusLabel(current.status) }}</el-tag>
         </div>
-        <div class="qr-box">
+        <div v-if="current.status === 'PAID'" class="success" role="status"><i aria-hidden="true"><Icon name="check" :size="24" /></i>已支付</div>
+        <div v-else class="qr-box">
           <div class="qr">▣</div>
           <p>扫码支付（演示环境不产生真实扣款）</p>
         </div>
-        <el-alert type="warning" :closable="false" show-icon
+        <el-alert v-if="current.status !== 'PAID'" type="warning" :closable="false" show-icon
                   title="演示说明"
                   description="点击下方按钮模拟支付成功；「模拟回调」用于演示第三方异步通知与幂等处理。" />
       </div>
       <template #footer>
         <el-button v-if="current && current.status === 'CREATED'" @click="mockCallback">模拟第三方回调</el-button>
         <el-button v-if="current && current.status === 'CREATED'" type="primary" @click="confirmPay">模拟支付成功</el-button>
-        <el-button v-if="current && current.status === 'PAID'" type="success" @click="cashierOpen = false">已完成</el-button>
+        <el-button v-if="current && current.status === 'PAID'" @click="goToOrders">查看我的订单</el-button>
+        <el-button v-if="current && current.status === 'PAID'" type="primary" @click="cashierOpen = false">已完成</el-button>
       </template>
     </el-dialog>
   </div>
@@ -86,7 +68,13 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '../api'
 
-interface Product { id: number; name: string; type: string; price: number; stock: number; description: string }
+import ReadState from '../components/detail/ReadState.vue'
+import { useReadState } from '../components/detail/useReadState'
+import { vReveal } from '../directives/reveal'
+import CheckoutSteps from '../components/detail/CheckoutSteps.vue'
+import Icon from '../components/ui/Icon.vue'
+
+interface Product { id: number; name: string; type: string; price: number; stock: number | null; description: string }
 interface Order {
   orderNo: string; productId: number; productName: string; amount: number;
   status: string; channel: string; payUrl?: string; createdAt?: string; paidAt?: string
@@ -94,32 +82,29 @@ interface Order {
 
 const router = useRouter()
 const products = ref<Product[]>([])
-const orders = ref<Order[]>([])
+const selectedId = ref<number>()
+const selected = computed(() => products.value.find(product => product.id === selectedId.value))
+const placing = ref(false)
+async function buySelected() {
+  if (!selected.value || placing.value) return
+  placing.value = true
+  try { await buy(selected.value) } finally { placing.value = false }
+}
+const { loading: productsLoading, error: productsError, run: readProducts } = useReadState()
 const cashierOpen = ref(false)
 const current = ref<Order | null>(null)
 const isLoggedIn = computed(() => !!localStorage.getItem('token'))
 
-onMounted(async () => {
-  await loadProducts()
-  if (isLoggedIn.value) await loadOrders()
+onMounted(() => {
+  loadProducts()
 })
 
-async function loadProducts() {
-  try {
+function loadProducts() {
+  return readProducts(async () => {
     const { data } = await api.get('/payment/products')
-    if (data.code === 0) products.value = data.data
-  } catch {
-    ElMessage.error('商品加载失败')
-  }
-}
-
-async function loadOrders() {
-  try {
-    const { data } = await api.get('/payment/orders', { params: { page: 0, size: 20 } })
-    if (data.code === 0) orders.value = data.data.items
-  } catch {
-    // 未登录或服务不可用时静默
-  }
+    if (data.code !== 0) throw new Error(data.message || '商品加载失败')
+    products.value = data.data
+  }, '商品加载失败')
 }
 
 async function buy(p: Product) {
@@ -134,7 +119,6 @@ async function buy(p: Product) {
       current.value = data.data
       await initiatePay()
       cashierOpen.value = true
-      await loadOrders()
     } else {
       ElMessage.error(data.message || '下单失败')
     }
@@ -153,10 +137,9 @@ async function initiatePay() {
   }
 }
 
-function openCashier(row: Order) {
-  current.value = row
-  initiatePay()
-  cashierOpen.value = true
+function goToOrders() {
+  cashierOpen.value = false
+  router.push('/orders')
 }
 
 async function confirmPay() {
@@ -166,7 +149,7 @@ async function confirmPay() {
     if (data.code === 0) {
       current.value = data.data
       ElMessage.success('支付成功，订单已更新为已支付')
-      await loadOrders()
+      await loadProducts()
     } else {
       ElMessage.error(data.message || '支付失败')
     }
@@ -187,7 +170,7 @@ async function mockCallback() {
       ElMessage.success('第三方回调已处理（重复回调会自动幂等）')
       const detail = await api.get(`/payment/orders/${current.value.orderNo}`)
       if (detail.data.code === 0) current.value = detail.data.data
-      await loadOrders()
+      await loadProducts()
     } else {
       ElMessage.error(data.message || '回调处理失败')
     }
@@ -205,46 +188,54 @@ function statusLabel(s: string) {
 function statusType(s: string): 'success' | 'warning' | 'info' {
   return s === 'PAID' ? 'success' : s === 'CREATED' ? 'warning' : 'info'
 }
-function formatTime(t?: string) {
-  if (!t) return '-'
-  return new Date(t).toLocaleString('zh-CN')
-}
 </script>
 
+<style scoped src="../components/detail/detail.css"></style>
 <style scoped>
-.payment-container { max-width: 1200px; margin: 0 auto; }
-.page-hero {
-  color: #fff; text-align: center; padding: 32px 16px 40px;
+.payment-container { width: min(100%, 1040px); margin: 0 auto; padding: 24px 0 64px; font-family: var(--ss-font); color: var(--ss-ink); }
+.page-hero h1 { font-size: clamp(30px,4vw,44px); letter-spacing: -.02em; font-weight: 600; color: var(--ss-navy); }
+.page-hero p, .description, .ticket-price small, dt, .order-copy small, .order-action, .cashier-row > span, .qr-box p { color: var(--ss-muted); }
+.page-hero p { margin: 8px 0 26px; }
+.checkout-layout { margin-top: 32px; display: grid; grid-template-columns: minmax(0,1.55fr) minmax(0,1fr); align-items: start; gap: 48px; }
+h2 { color: var(--ss-navy); font-size: 22px; margin-bottom: 16px; }
+.choices { min-width: 0; border: 0; padding: 0; display: grid; gap: 12px; }
+.ticket { display: grid; position: relative; grid-template-columns: minmax(0,1fr) auto 22px; align-items: center; gap: 16px;
+  padding: 22px; cursor: pointer; border: 1px solid var(--ss-line-strong); border-radius: 20px; background: #fff; }
+.ticket.selected { border-color: var(--ss-navy); box-shadow: inset 0 0 0 1px var(--ss-navy); }
+.ticket:has(input:focus-visible) { outline: 2px solid rgba(21, 21, 21, .55); outline-offset: 2px; }
+.ticket.sold { background: var(--ss-bg-soft); cursor: default; }
+.ticket input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); }
+.ticket-info, .ticket-price { display: grid; justify-items: start; gap: 6px; }
+.ticket-info > b { font-size: 18px; color: var(--ss-navy); }
+.description { font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.ticket-price { justify-items: end; font-variant-numeric: tabular-nums; }
+.ticket-price b { font-size: 22px; }
+.mark { display: grid; place-items: center; border-radius: 50%; width: 22px; height: 22px; border: 1px solid var(--ss-line-strong); }
+.selected .mark { background: var(--ss-teal-ink); color: #fff; }
+.summary { position: sticky; top: 96px; border-radius: 24px; padding: 26px; background: var(--ss-bg-soft); border: 1px solid var(--ss-line); }
+.summary dl { margin: 16px 0; }
+.summary dl > div, .cashier-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 9px 0; }
+dd { margin: 0; text-align: right; font-weight: 600; }
+.summary .total { margin-top: 12px; border-top: 1px solid var(--ss-line-strong); align-items: center; }
+.total dd, .amount { font-size: 26px; color: var(--ss-navy); }
+.summary .el-button { width: 100%; min-height: 46px; }
+.summary-orders-link { display: block; margin-top: 14px; text-align: center; font-size: 13px; color: var(--ss-muted); transition: color var(--ss-dur) var(--ss-ease); }
+.summary-orders-link:hover { color: var(--ss-navy); }
+.login-tip { margin-top: 48px; }
+.cashier-row { border-bottom: 1px solid var(--ss-line); }
+.cashier-row b { overflow-wrap: anywhere; text-align: right; }
+.qr-box, .success { text-align: center; padding: 20px 0; }
+.qr { width: 112px; height: 112px; margin: 0 auto 12px; font-size: 80px; line-height: 112px; color: var(--ss-navy); background: repeating-conic-gradient(var(--ss-navy) 0 25%, #fff 0 50%) 0 0/16px 16px; border: 5px solid white; outline: 1px solid var(--ss-line-strong); }
+.success { display: grid; justify-items: center; gap: 8px; font-weight: 600; }
+.success i { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--ss-teal-soft); color: var(--ss-teal-ink); font-style: normal; font-size: 26px; }
+@media(prefers-reduced-motion: no-preference) { .success i { animation: checked .32s var(--ss-ease) both; } }
+@keyframes checked { from { opacity: 0; transform: scale(.75); } to { opacity: 1; transform: scale(1); } }
+@media(max-width:1200px) { .checkout-layout { gap: 32px; } }
+@media(max-width:960px) { .checkout-layout { gap: 20px; grid-template-columns: minmax(0,1.3fr) minmax(260px,1fr); } }
+@media(max-width:640px) {
+  .payment-container { padding: 12px 4px 40px; }
+  .checkout-layout { grid-template-columns: minmax(0,1fr); }
+  .summary { position: static; padding: 20px; }
+  .ticket { gap: 10px; padding: 16px; }
 }
-.page-hero h1 { font-size: 34px; margin-bottom: 10px; text-shadow: 0 2px 12px rgba(0,0,0,.25); }
-.page-hero p { opacity: .92; }
-.product-grid { margin-bottom: 24px; }
-.product-card { border-radius: 14px; margin-bottom: 20px; height: 100%; }
-.product-type {
-  display: inline-block; font-size: 12px; color: #ff0050; background: #fff0f5;
-  padding: 3px 10px; border-radius: 10px; margin-bottom: 10px;
-}
-.product-name { font-size: 18px; margin-bottom: 10px; color: #222; }
-.product-desc { font-size: 13px; color: #777; line-height: 1.6; min-height: 62px; }
-.product-footer { display: flex; align-items: baseline; justify-content: space-between; margin: 12px 0; }
-.price { color: #ff0050; font-size: 14px; }
-.price span { font-size: 28px; font-weight: 700; }
-.stock { font-size: 12px; color: #999; }
-.buy-btn { width: 100%; }
-.orders-card { border-radius: 14px; background: rgba(255,255,255,.97); }
-.orders-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.orders-head h2 { font-size: 20px; color: #222; }
-.paid-text { color: #67c23a; font-size: 13px; }
-.empty { text-align: center; color: #999; padding: 24px; }
-.login-tip { max-width: 560px; margin: 0 auto; border-radius: 12px; }
-.cashier-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
-.cashier-row span { color: #888; }
-.cashier-row .amount { color: #ff0050; font-size: 20px; }
-.qr-box { text-align: center; padding: 18px 0; }
-.qr {
-  width: 130px; height: 130px; margin: 0 auto 10px; font-size: 90px; line-height: 130px;
-  color: #111; background: repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0/16px 16px;
-  border: 6px solid #fff; outline: 2px solid #eee;
-}
-.qr-box p { font-size: 12px; color: #999; }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="admin-media-page">
     <h2 class="page-title">
-      <el-icon class="title-icon"><Camera /></el-icon>
+      <Icon name="camera" :size="22" class="title-icon" />
       媒体资产管理
     </h2>
     <p class="page-subtitle">管理大会精彩花絮、图片和视频内容</p>
@@ -9,7 +9,7 @@
     <!-- Upload Form -->
     <el-card class="upload-card">
       <h3>
-        <el-icon class="heading-icon"><Upload /></el-icon>
+        <Icon name="upload" :size="18" class="heading-icon" />
         上传新媒体
       </h3>
       <el-form :model="form" label-width="120px" class="upload-form">
@@ -29,11 +29,11 @@
         <el-form-item label="媒体类型" required>
           <el-radio-group v-model="form.type">
             <el-radio label="image">
-              <el-icon class="inline-icon"><Picture /></el-icon>
+              <Icon name="image" :size="15" class="inline-icon" />
               图片
             </el-radio>
             <el-radio label="video">
-              <el-icon class="inline-icon"><VideoCamera /></el-icon>
+              <Icon name="video" :size="15" class="inline-icon" />
               视频
             </el-radio>
           </el-radio-group>
@@ -47,7 +47,7 @@
             :limit="1"
             :accept="form.type === 'image' ? 'image/*' : 'video/*'"
           >
-            <el-button type="primary" :icon="Upload">选择文件</el-button>
+            <el-button type="primary"><Icon name="upload" :size="15" style="margin-right: 4px" />选择文件</el-button>
             <template #tip>
               <div class="el-upload__tip">
                 {{ form.type === 'image' ? '支持 JPG、PNG、GIF 格式' : '支持 MP4、AVI、MOV 格式' }}
@@ -55,7 +55,7 @@
             </template>
           </el-upload>
           <div v-if="selectedFile" class="file-info">
-            <el-icon class="status-icon"><CircleCheck /></el-icon>
+            <Icon name="check-circle" :size="16" class="status-icon" />
             已选择: {{ selectedFile.name }}
           </div>
         </el-form-item>
@@ -92,7 +92,7 @@
             size="large"
           >
             <span v-if="!uploading">
-              <el-icon class="btn-icon"><Promotion /></el-icon>
+              <Icon name="send" :size="15" class="btn-icon" />
               上传并发布
             </span>
             <span v-else>上传中...</span>
@@ -106,7 +106,7 @@
     <el-card class="list-card">
       <div class="list-header">
         <h3>
-          <el-icon class="heading-icon"><List /></el-icon>
+          <Icon name="list" :size="18" class="heading-icon" />
           已发布媒体列表
         </h3>
         <el-radio-group v-model="filterType" @change="loadMedia(1)" size="small">
@@ -123,11 +123,11 @@
           <template #default="{ row }">
             <el-tag :type="row.type === 'image' ? 'success' : 'primary'">
               <template v-if="row.type === 'image'">
-                <el-icon class="tag-icon"><Picture /></el-icon>
+                <Icon name="image" :size="13" class="tag-icon" />
                 图片
               </template>
               <template v-else>
-                <el-icon class="tag-icon"><VideoCamera /></el-icon>
+                <Icon name="video" :size="13" class="tag-icon" />
                 视频
               </template>
             </el-tag>
@@ -141,10 +141,12 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" type="primary" @click="previewMedia(row)" :icon="View">
+            <el-button size="small" type="primary" @click="previewMedia(row)">
+              <Icon name="eye" :size="14" style="margin-right: 4px" />
               预览
             </el-button>
-            <el-button size="small" type="danger" @click="deleteMedia(row)" :icon="Delete">
+            <el-button size="small" type="danger" @click="deleteMedia(row)">
+              <Icon name="trash" :size="14" style="margin-right: 4px" />
               删除
             </el-button>
           </template>
@@ -208,7 +210,7 @@
  */
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Camera, CircleCheck, Delete, List, Picture, Promotion, Upload, VideoCamera, View } from '@element-plus/icons-vue'
+import Icon from '../../components/ui/Icon.vue'
 import adminApi from '../../adminApi'
 
 const form = reactive({

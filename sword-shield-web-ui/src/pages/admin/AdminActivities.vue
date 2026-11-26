@@ -3,7 +3,7 @@
     <div class="page-header">
       <h3>活动列表</h3>
       <el-button type="primary" @click="showCreateDialog">
-        <el-icon><Plus /></el-icon>
+        <Icon name="plus" :size="15" style="margin-right: 4px" />
         新建活动
       </el-button>
     </div>
@@ -138,7 +138,7 @@
 import { ref, onMounted } from 'vue'
 import adminApi from '../../adminApi'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import Icon from '../../components/ui/Icon.vue'
 
 interface Activity {
   /** 活动 ID（编辑/删除时存在）。 */

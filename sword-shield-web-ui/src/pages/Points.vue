@@ -2,7 +2,6 @@
   <div class="points-container">
     <el-card class="points-card">
       <div class="points-header">
-        <el-icon class="points-icon"><Trophy /></el-icon>
         <div>
           <h2>积分详情</h2>
           <p class="points-subtitle">活动签到获得积分，明细实时更新</p>
@@ -129,52 +128,47 @@ onMounted(reload)
 
 <style scoped>
 .points-container {
-  max-width: 720px;
+  max-width: 780px;
   margin: 0 auto;
 }
 
 .points-card {
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
+  box-shadow: none;
+  padding: 12px;
 }
 
 .points-header {
   display: flex;
   align-items: center;
-  gap: 14px;
   margin-bottom: 18px;
-}
-
-.points-icon {
-  font-size: 44px;
 }
 
 .points-header h2 {
   font-size: 22px;
-  color: #333;
+  font-weight: 700;
+  color: #0b2545;
   margin: 0;
 }
 
 .points-subtitle {
-  color: #666;
+  color: #506273;
   font-size: 14px;
-  margin: 6px 0 0 0;
+  margin: 4px 0 0 0;
 }
 
 .points-display {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .points-badge {
   display: flex;
   align-items: center;
-  padding: 22px 44px;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
-  border-radius: 16px;
-  border: 2px solid #2563eb;
+  padding: 20px 24px;
+  background: #f6f8fa;
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
 }
 
 .points-info {
@@ -184,18 +178,16 @@ onMounted(reload)
 }
 
 .points-label {
-  font-size: 14px;
-  color: #666;
+  font-size: 13px;
+  color: #506273;
   margin-bottom: 4px;
 }
 
 .points-value {
   font-size: 36px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 700;
+  color: #0b2545;
+  line-height: 1.1;
 }
 
 .txn-header {

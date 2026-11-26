@@ -1,50 +1,35 @@
 <template>
   <div class="statistics-container">
-    <el-card class="header-card">
-      <h1 class="page-title">
-        <el-icon class="title-icon"><DataAnalysis /></el-icon>
-        活动统计
-      </h1>
-      <p class="page-subtitle">查看各项活动的参与情况和数据分析</p>
-    </el-card>
+    <div class="page-head">
+      <h1 class="page-title">数据看板</h1>
+      <p class="page-subtitle">各场次报名人数、报名率与渠道来源统计</p>
+    </div>
 
-    <el-card class="stats-overview">
+    <el-card class="stats-overview" shadow="never">
       <h2>总体概览</h2>
-      <el-row :gutter="24" class="overview-row">
-        <el-col :span="6">
-          <div class="stat-box stat-box-1">
-            <el-icon class="stat-icon"><Aim /></el-icon>
-            <div class="stat-content">
-              <div class="stat-label">活动总数</div>
-              <div class="stat-value">{{ totalActivities }}</div>
-            </div>
+      <el-row :gutter="16" class="overview-row">
+        <el-col :xs="12" :sm="6">
+          <div class="stat-box">
+            <div class="stat-label">活动总数</div>
+            <div class="stat-value">{{ totalActivities }}</div>
           </div>
         </el-col>
-        <el-col :span="6">
-          <div class="stat-box stat-box-2">
-            <el-icon class="stat-icon"><UserFilled /></el-icon>
-            <div class="stat-content">
-              <div class="stat-label">总报名人数</div>
-              <div class="stat-value">{{ totalRegistrations }}</div>
-            </div>
+        <el-col :xs="12" :sm="6">
+          <div class="stat-box">
+            <div class="stat-label">总报名人数</div>
+            <div class="stat-value">{{ totalRegistrations }}</div>
           </div>
         </el-col>
-        <el-col :span="6">
-          <div class="stat-box stat-box-3">
-            <el-icon class="stat-icon"><Lightning /></el-icon>
-            <div class="stat-content">
-              <div class="stat-label">总热度</div>
-              <div class="stat-value">{{ totalHeat }}</div>
-            </div>
+        <el-col :xs="12" :sm="6">
+          <div class="stat-box">
+            <div class="stat-label">总热度</div>
+            <div class="stat-value">{{ totalHeat }}</div>
           </div>
         </el-col>
-        <el-col :span="6">
-          <div class="stat-box stat-box-4">
-            <el-icon class="stat-icon"><TrendCharts /></el-icon>
-            <div class="stat-content">
-              <div class="stat-label">平均报名率</div>
-              <div class="stat-value">{{ averageRate }}%</div>
-            </div>
+        <el-col :xs="12" :sm="6">
+          <div class="stat-box">
+            <div class="stat-label">平均报名率</div>
+            <div class="stat-value">{{ averageRate }}%</div>
           </div>
         </el-col>
       </el-row>
@@ -148,11 +133,11 @@ const channelLabels: Record<string, string> = {
   unknown: '其他'
 }
 const channelColors: Record<string, string> = {
-  web: '#409eff',
-  miniprogram: '#67c23a',
-  onsite: '#e6a23c',
-  invite: '#e6005a',
-  unknown: '#909399'
+  web: '#0b2545',
+  miniprogram: '#0f766e',
+  onsite: '#b45309',
+  invite: '#334155',
+  unknown: '#94a3b8'
 }
 
 const channelStats = computed(() => {
@@ -251,124 +236,79 @@ onMounted(() => {
   margin: 0 auto;
 }
 
-.header-card {
-  margin-bottom: 24px;
-  text-align: center;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+.page-head {
+  padding: 8px 0 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #d8e0e5;
 }
 
 .page-title {
-  margin: 0 0 8px 0;
-  font-size: 32px;
-  color: #333;
+  margin: 0 0 6px 0;
+  font-size: 26px;
+  color: #0b2545;
   font-weight: 700;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-}
-
-.title-icon {
-  color: #409eff;
 }
 
 .page-subtitle {
   margin: 0;
-  color: #666;
+  color: #506273;
   font-size: 14px;
 }
 
 .stats-overview {
-  margin-bottom: 24px;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
 }
 
 .stats-overview h2 {
-  margin: 0 0 20px 0;
-  font-size: 20px;
-  color: #333;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #0b2545;
   font-weight: 600;
 }
 
 .overview-row {
-  margin-top: 16px;
+  margin-top: 8px;
 }
 
 .stat-box {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s;
-}
-
-.stat-box:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.stat-box-1 .stat-icon {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-}
-
-.stat-box-2 .stat-icon {
-  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
-}
-
-.stat-box-3 .stat-icon {
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
-}
-
-.stat-box-4 .stat-icon {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-.stat-content {
-  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8ee;
+  border-top: 3px solid #0b2545;
+  border-radius: 6px;
+  padding: 18px 20px;
+  margin-bottom: 8px;
 }
 
 .stat-label {
-  font-size: 14px;
-  color: #999;
-  margin-bottom: 4px;
+  font-size: 13px;
+  color: #506273;
+  margin-bottom: 8px;
 }
 
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #333;
+  color: #0b2545;
+  line-height: 1.1;
 }
 
 .activity-stats {
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
+  box-shadow: none;
 }
 
 .activity-stats h2 {
-  margin: 0 0 20px 0;
-  font-size: 20px;
-  color: #333;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  color: #0b2545;
   font-weight: 600;
 }
 
 .stats-table {
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
@@ -378,9 +318,10 @@ onMounted(() => {
 }
 
 .channel-card {
-  margin-top: 24px;
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  margin-top: 20px;
+  border-radius: 8px;
+  border: 1px solid #d8e0e5;
+  box-shadow: none;
 }
 
 .channel-head {

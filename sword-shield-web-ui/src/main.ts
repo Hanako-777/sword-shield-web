@@ -9,17 +9,17 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import ElementPlus from 'element-plus'
+import '@fontsource-variable/inter'
+import '@fontsource/noto-sans-sc/400.css'
+import '@fontsource/noto-sans-sc/500.css'
+import '@fontsource/noto-sans-sc/600.css'
 import 'element-plus/dist/index.css'
-import * as ElementPlusIconsVue from '@element-plus/icons-vue'
+// 设计规范与全局样式：必须在 Element Plus 样式之后引入，才能覆盖其主题变量
+import './styles/tokens.css'
+import './styles/base.css'
 
 const app = createApp(App)
-
-// Register Element Plus icons globally
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component)
-}
 
 app.use(router)
 app.use(ElementPlus)
 app.mount('#app')
-
