@@ -1,0 +1,19 @@
+server:
+  port: 8107
+spring:
+  config:
+    import: "classpath:common.yml,classpath:observability.yml"
+  application:
+    name: sword-shield-ai
+springdoc:
+  api-docs:
+    path: /api/ai/v3/api-docs
+
+# 大模型配置：默认走离线规则引擎；配置 AI_API_KEY 后自动切换 OpenAI 兼容接口
+ai:
+  enabled: ${AI_ENABLED:false}
+  base-url: ${AI_BASE_URL:https://api.deepseek.com}
+  api-key: ${AI_API_KEY:}
+  model: ${AI_MODEL:deepseek-chat}
+  timeout-ms: ${AI_TIMEOUT_MS:15000}
+  activity-service-url: ${ACTIVITY_SERVICE_URL:http://localhost:8102}

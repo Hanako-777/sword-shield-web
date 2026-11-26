@@ -32,6 +32,7 @@ import Exhibitors from './pages/Exhibitors.vue'
 import Achievements from './pages/Achievements.vue'
 import Materials from './pages/Materials.vue'
 import Media from './pages/Media.vue'
+import Payment from './pages/Payment.vue'
 
 const routes = [
   { path: '/', component: Home },
@@ -50,6 +51,7 @@ const routes = [
   { path: '/achievements', component: Achievements },
   { path: '/materials', component: Materials },
   { path: '/media', component: Media },
+  { path: '/payment', component: Payment, meta: { public: true } },
   { path: '/submissions', component: UserSubmissions },
   { path: '/submit', component: UGCSubmit },
   { path: '/admin/login', component: AdminLogin },

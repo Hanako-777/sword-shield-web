@@ -9,3 +9,6 @@ target
 node_modules
 .DS_Store
 dist
+
+uploads
+screenshots

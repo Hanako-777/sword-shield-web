@@ -27,6 +27,8 @@ flowchart LR
   GW -->|lb://| INT[sword-shield-interaction]
   GW -->|lb://| FILE[sword-shield-file]
   GW -->|lb://| ADM[sword-shield-admin]
+  GW -->|lb://| AI[sword-shield-ai]
+  GW -->|lb://| PAY[sword-shield-payment]
 
   RPC[(Dubbo RPC)]
   USER -.-> RPC
@@ -120,6 +122,8 @@ flowchart LR
 | `sword-shield-interaction` | 8104 | `/api/interaction/**` | 评论、点赞等 |
 | `sword-shield-file` | 8105 | `/api/file/**` | 文件/对象存储（MinIO） |
 | `sword-shield-admin` | 8106 | `/api/admin/**` | 管理端接口 |
+| `sword-shield-ai` | 8107 | `/api/ai/**` | 大会智能助手（大模型/离线规则引擎） |
+| `sword-shield-payment` | 8108 | `/api/payment/**` | 在线支付（商品/订单/回调/对账） |
 | `sword-shield-api` | - | - | DTO/RPC 接口定义（Jar，无独立端口） |
 | `sword-shield-common` | - | - | 公共工具/异常/配置资源（Jar，无独立端口） |
 
@@ -167,6 +171,8 @@ mvn -pl sword-shield-content -am spring-boot:run -DskipTests
 mvn -pl sword-shield-interaction -am spring-boot:run -DskipTests
 mvn -pl sword-shield-file -am spring-boot:run -DskipTests
 mvn -pl sword-shield-admin -am spring-boot:run -DskipTests
+mvn -pl sword-shield-ai -am spring-boot:run -DskipTests
+mvn -pl sword-shield-payment -am spring-boot:run -DskipTests
 mvn -pl sword-shield-gateway -am spring-boot:run -DskipTests
 ```
 
@@ -195,6 +201,39 @@ npm run dev
 - **业务重试（项目补充）**：当投递失败（如 `RemotingTimeoutException`）时，任务不会立刻失败，而是记录投递次数并按退避策略重投，直到成功或超过上限（`POSTER_MQ_DISPATCH_MAX_ATTEMPTS` 等）。
 - **消费幂等**：重复消息不会导致重复执行（任务状态原子迁移 `PENDING -> PROCESSING`）。
 - **可观测**：任务查询接口会返回 `dispatchAttempts`、`dispatchLastError`、`dispatchNextRetryAt` 辅助定位问题。
+
+## AI 助手与在线支付
+
+### AI 助手（`sword-shield-ai`，8107）
+- 公开接口：`/api/ai/**`（游客可用；登录后自动记录 `X-User-Id`）。
+- 默认使用**离线规则引擎**，无网络/无 Key 也能回答日程、报名、资料、购票等问题。
+- 配置真实大模型（OpenAI 兼容协议，DeepSeek/通义/本地 vLLM 均可）：
+
+```sh
+export AI_ENABLED=true
+export AI_API_KEY=sk-xxx
+export AI_BASE_URL=https://api.deepseek.com
+export AI_MODEL=deepseek-chat
+```
+
+- 调用失败自动降级到规则引擎；问答流水写入 `ai_chat_log`，可按问题/模型/耗时做运营分析。
+- AI 服务通过 `ACTIVITY_SERVICE_URL`（默认 `http://localhost:8102`）拉取实时日程，作为轻量 RAG 上下文。
+
+### 在线支付（`sword-shield-payment`，8108）
+- 商品列表公开：`GET /api/payment/products`；下单/支付/订单查询需登录；对账接口在 `/api/payment/admin/statistics`（网关强制 ADMIN）。
+- 订单状态机：`CREATED → PAID`；回调幂等，重复回调不会重复扣库存。
+- 演示环境为**模拟支付**，不产生真实扣款；接支付宝/微信时替换回调验签即可。
+- 手工建表与演示商品：`db/ai_payment.sql`（服务启动时 JPA 也会自动建表）。
+
+### 文件存储本地模式
+没有 MinIO 时：
+
+```sh
+export MINIO_ENABLED=false
+export FILE_LOCAL_DIR=./uploads
+```
+
+上传落本地磁盘，下载地址为 `/api/file/raw?objectName=...`；有 MinIO 时保持 `MINIO_ENABLED=true` 使用预签名 URL。
 
 ## 可观测（Observability）
 ### 指标（Prometheus / Grafana）

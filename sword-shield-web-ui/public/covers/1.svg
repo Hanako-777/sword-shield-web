@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="hsl(47,90%,38%)"/>
+      <stop offset="55%" stop-color="hsl(87,85%,28%)"/>
+      <stop offset="100%" stop-color="#0b1020"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#g1)"/>
+  <circle cx="1010" cy="120" r="190" fill="#ffffff" opacity="0.07"/>
+  <circle cx="160" cy="580" r="240" fill="#ffffff" opacity="0.05"/>
+  <path d="M0 600 L1200 420 L1200 675 L0 675 Z" fill="#000000" opacity="0.18"/>
+  <text x="70" y="250" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="58" font-weight="700" fill="#ffffff">西湖论剑·数字安全大会</text>
+  <text x="72" y="322" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="28" fill="#ffffff" opacity="0.82">AI 安全 · 数据要素 · 关基保护</text>
+  <text x="72" y="610" font-family="Segoe UI, sans-serif" font-size="22" letter-spacing="6" fill="#ffffff" opacity="0.75">XIHULUNJIAN 2026</text>
+</svg>

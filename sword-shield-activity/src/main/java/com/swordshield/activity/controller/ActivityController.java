@@ -77,6 +77,12 @@ public class ActivityController {
         return Response.ok(stats);
     }
 
+    @GetMapping("/statistics/channels")
+    @Operation(summary = "报名渠道溯源", description = "按 web/小程序/现场/邀请分组统计")
+    public Response<Map<String, Long>> channelStatistics(@RequestParam("id") Long id) {
+        return Response.ok(service.getChannelStatistics(id));
+    }
+
     @GetMapping("/statistics/all")
     @Operation(summary = "全部活动统计", description = "返回所有活动的基础统计列表")
     public Response<java.util.List<Map<String, Object>>> allStatistics() {

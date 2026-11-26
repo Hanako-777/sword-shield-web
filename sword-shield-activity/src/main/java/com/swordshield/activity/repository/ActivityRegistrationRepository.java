@@ -21,6 +21,15 @@ public interface ActivityRegistrationRepository extends JpaRepository<ActivityRe
         Long getRegistrations();
     }
 
+    /** 渠道溯源：按报名来源分组统计。 */
+    @Query("select r.channel as channel, count(r) as cnt from ActivityRegistration r where r.activityId = :activityId group by r.channel")
+    List<ChannelCount> countChannelsByActivityId(@Param("activityId") Long activityId);
+
+    interface ChannelCount {
+        String getChannel();
+        Long getCnt();
+    }
+
     List<ActivityRegistration> findByUserId(Long userId);
     Page<ActivityRegistration> findByUserId(Long userId, Pageable pageable);
 }

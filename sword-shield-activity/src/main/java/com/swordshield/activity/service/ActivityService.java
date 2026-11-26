@@ -143,6 +143,17 @@ public class ActivityService {
         return stats;
     }
 
+    /** 渠道溯源：返回 {web: n, miniprogram: n, onsite: n, invite: n}。 */
+    public Map<String, Long> getChannelStatistics(Long activityId) {
+        activityRepo.findById(activityId).orElseThrow(() -> new IllegalArgumentException("活动不存在"));
+        Map<String, Long> result = new java.util.LinkedHashMap<>();
+        for (ActivityRegistrationRepository.ChannelCount row : regRepo.countChannelsByActivityId(activityId)) {
+            String channel = row.getChannel() == null ? "unknown" : row.getChannel();
+            result.merge(channel, row.getCnt() == null ? 0L : row.getCnt(), Long::sum);
+        }
+        return result;
+    }
+
     public java.util.List<Map<String, Object>> getAllStatistics() {
         java.util.List<Activity> activities = activityRepo.findAll(Sort.by(Sort.Direction.DESC, "heat"));
 

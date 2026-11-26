@@ -49,7 +49,37 @@
         </div>
       </el-col>
     </el-row>
-    
+
+    <el-row :gutter="24" class="stats-row">
+      <el-col :span="8">
+        <div class="stat-card stat-card-4">
+          <div class="stat-icon"><el-icon :size="26"><Money /></el-icon></div>
+          <div class="stat-content">
+            <div class="stat-label">支付收入（元）</div>
+            <div class="stat-value">{{ payment.revenue }}</div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :span="8">
+        <div class="stat-card stat-card-3">
+          <div class="stat-icon"><el-icon :size="26"><ShoppingCart /></el-icon></div>
+          <div class="stat-content">
+            <div class="stat-label">已支付订单</div>
+            <div class="stat-value">{{ payment.paidOrders }}</div>
+          </div>
+        </div>
+      </el-col>
+      <el-col :span="8">
+        <div class="stat-card stat-card-1">
+          <div class="stat-icon"><el-icon :size="26"><TrendCharts /></el-icon></div>
+          <div class="stat-content">
+            <div class="stat-label">支付转化率</div>
+            <div class="stat-value">{{ payment.conversionRate }}%</div>
+          </div>
+        </div>
+      </el-col>
+    </el-row>
+
     <el-card class="welcome-card">
       <template #header>
         <div class="card-header">
@@ -83,7 +113,7 @@
  */
 import { ref, onMounted } from 'vue'
 import adminApi from '../../adminApi'
-import { Calendar, SuccessFilled, User, TrendCharts } from '@element-plus/icons-vue'
+import { Calendar, SuccessFilled, User, TrendCharts, Money, ShoppingCart } from '@element-plus/icons-vue'
 
 const adminUsername = ref(localStorage.getItem('adminUsername') || '')
 const adminNickname = ref(localStorage.getItem('adminNickname') || '')
@@ -93,6 +123,12 @@ const stats = ref({
   activeActivities: 0,
   totalRegistrations: 0,
   totalHeat: 0
+})
+
+const payment = ref({
+  revenue: 0,
+  paidOrders: 0,
+  conversionRate: 0
 })
 
 async function loadStats() {
@@ -108,6 +144,17 @@ async function loadStats() {
     }
   } catch (error) {
     console.error('Failed to load stats', error)
+  }
+
+  try {
+    const { data } = await adminApi.get('/payment/admin/statistics')
+    if (data.code === 0) {
+      payment.value.revenue = data.data.revenue
+      payment.value.paidOrders = data.data.paidOrders
+      payment.value.conversionRate = data.data.conversionRate
+    }
+  } catch (error) {
+    console.error('Failed to load payment stats', error)
   }
 }
 

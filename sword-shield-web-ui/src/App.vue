@@ -55,6 +55,7 @@
               <router-link to="/exhibitors" class="nav-link">参展单位</router-link>
               <router-link to="/achievements" class="nav-link">成果展示</router-link>
               <router-link to="/materials" class="nav-link">资料下载</router-link>
+              <router-link to="/payment" class="nav-link">购票</router-link>
               <router-link to="/media" class="nav-link">媒体中心</router-link>
               <router-link to="/statistics" class="nav-link">数据看板</router-link>
               <router-link to="/submissions" class="nav-link">用户投稿</router-link>
@@ -79,6 +80,7 @@
           </div>
         </div>
       </footer>
+      <AiAssistant v-if="!isAuthRoute" />
     </template>
     <template v-else>
       <!-- Admin routes: render only admin layout from admin components -->
@@ -98,6 +100,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { DataBoard, Lock } from '@element-plus/icons-vue'
+import AiAssistant from './components/AiAssistant.vue'
 
 const router = useRouter()
 const route = useRoute()

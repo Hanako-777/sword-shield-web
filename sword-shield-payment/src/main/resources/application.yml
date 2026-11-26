@@ -1,0 +1,14 @@
+server:
+  port: 8108
+spring:
+  config:
+    import: "classpath:common.yml,classpath:observability.yml"
+  application:
+    name: sword-shield-payment
+springdoc:
+  api-docs:
+    path: /api/payment/v3/api-docs
+
+payment:
+  order-prefix: ${PAYMENT_ORDER_PREFIX:XHLJ}
+  seed: ${PAYMENT_SEED:true}

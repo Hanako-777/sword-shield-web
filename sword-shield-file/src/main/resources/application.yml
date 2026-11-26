@@ -17,7 +17,10 @@ springdoc:
   api-docs:
     path: /api/file/v3/api-docs
 minio:
-  endpoint: http://localhost:9000
-  accessKey: admin
-  secretKey: admin123456
-  bucket: assets
+  # 有 MinIO 时保持 true；离线演示可设 MINIO_ENABLED=false 落本地磁盘
+  enabled: ${MINIO_ENABLED:true}
+  local-dir: ${FILE_LOCAL_DIR:./uploads}
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  accessKey: ${MINIO_ACCESS_KEY:admin}
+  secretKey: ${MINIO_SECRET_KEY:admin123456}
+  bucket: ${MINIO_BUCKET:assets}

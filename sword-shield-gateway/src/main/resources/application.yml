@@ -32,6 +32,10 @@ gateway:
       - /api/file/presigned**
       - /api/interaction/comments**
       - /api/interaction/likes/count**
+      - /api/ai/**
+      - /api/payment/products**
+      - /api/payment/callback/**
+      - /api/file/raw**
       - /actuator/health**
       - /actuator/info**
       - /actuator/prometheus**
@@ -73,6 +77,14 @@ spring:
           uri: lb://sword-shield-admin
           predicates:
             - Path=/api/admin/**
+        - id: ai
+          uri: lb://sword-shield-ai
+          predicates:
+            - Path=/api/ai/**
+        - id: payment
+          uri: lb://sword-shield-payment
+          predicates:
+            - Path=/api/payment/**
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -89,6 +101,10 @@ springdoc:
         url: /api/interaction/v3/api-docs
       - name: admin
         url: /api/admin/v3/api-docs
+      - name: ai
+        url: /api/ai/v3/api-docs
+      - name: payment
+        url: /api/payment/v3/api-docs
 management:
   endpoints:
     web:

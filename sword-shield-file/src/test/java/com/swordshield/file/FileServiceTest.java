@@ -12,7 +12,8 @@ public class FileServiceTest {
     void constructOk() {
         MinioClient client = Mockito.mock(MinioClient.class);
         AssetFileRepository repo = Mockito.mock(AssetFileRepository.class);
-        FileService service = new FileService(client, repo, "bucket");
+        FileService service = new FileService(client, repo, "bucket", false,
+                System.getProperty("java.io.tmpdir"));
         Assertions.assertNotNull(service);
     }
 }
