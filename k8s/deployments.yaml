@@ -1,0 +1,809 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-gateway
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-gateway
+  template:
+    metadata:
+      labels:
+        app: ss-gateway
+    spec:
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at mysql:13306..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z mysql 13306 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at nacos:8848..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z nacos 8848 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      containers:
+        - name: ss-gateway
+          image: ss-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-gateway
+  namespace: sword-shield
+spec:
+  type: NodePort
+  selector:
+    app: ss-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-user
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-user
+  template:
+    metadata:
+      labels:
+        app: ss-user
+    spec:
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at mysql:13306..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z mysql 13306 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at nacos:8848..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z nacos 8848 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      containers:
+        - name: ss-user
+          image: ss-user:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8101
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8101
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8101
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-user
+  namespace: sword-shield
+spec:
+  selector:
+    app: ss-user
+  ports:
+    - name: http
+      port: 8101
+      targetPort: 8101
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-activity
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-activity
+  template:
+    metadata:
+      labels:
+        app: ss-activity
+    spec:
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at mysql:13306..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z mysql 13306 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at nacos:8848..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z nacos 8848 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      containers:
+        - name: ss-activity
+          image: ss-activity:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8102
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8102
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8102
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-activity
+  namespace: sword-shield
+spec:
+  selector:
+    app: ss-activity
+  ports:
+    - name: http
+      port: 8102
+      targetPort: 8102
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-content
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-content
+  template:
+    metadata:
+      labels:
+        app: ss-content
+    spec:
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at mysql:13306..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z mysql 13306 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at nacos:8848..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z nacos 8848 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      containers:
+        - name: ss-content
+          image: ss-content:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8103
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8103
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8103
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-content
+  namespace: sword-shield
+spec:
+  selector:
+    app: ss-content
+  ports:
+    - name: http
+      port: 8103
+      targetPort: 8103
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-interaction
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-interaction
+  template:
+    metadata:
+      labels:
+        app: ss-interaction
+    spec:
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at mysql:13306..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z mysql 13306 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at nacos:8848..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z nacos 8848 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      containers:
+        - name: ss-interaction
+          image: ss-interaction:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8104
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8104
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8104
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-interaction
+  namespace: sword-shield
+spec:
+  selector:
+    app: ss-interaction
+  ports:
+    - name: http
+      port: 8104
+      targetPort: 8104
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-file
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-file
+  template:
+    metadata:
+      labels:
+        app: ss-file
+    spec:
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at mysql:13306..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z mysql 13306 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at nacos:8848..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z nacos 8848 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      containers:
+        - name: ss-file
+          image: ss-file:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8105
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+            - name: MINIO_ENDPOINT
+              value: "http://minio:9000"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8105
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8105
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-file
+  namespace: sword-shield
+spec:
+  selector:
+    app: ss-file
+  ports:
+    - name: http
+      port: 8105
+      targetPort: 8105
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-admin
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-admin
+  template:
+    metadata:
+      labels:
+        app: ss-admin
+    spec:
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at mysql:13306..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z mysql 13306 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at nacos:8848..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z nacos 8848 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      containers:
+        - name: ss-admin
+          image: ss-admin:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8106
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8106
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8106
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-admin
+  namespace: sword-shield
+spec:
+  selector:
+    app: ss-admin
+  ports:
+    - name: http
+      port: 8106
+      targetPort: 8106
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-web-ui
+  namespace: sword-shield
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ss-web-ui
+  template:
+    metadata:
+      labels:
+        app: ss-web-ui
+    spec:
+      containers:
+        - name: ss-web-ui
+          image: ss-web-ui:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-web-ui
+  namespace: sword-shield
+spec:
+  type: NodePort
+  selector:
+    app: ss-web-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30000

@@ -1,0 +1,11 @@
+.serena
+.tmp
+.idea
+data
+logs
+target
+.vscode
+*.class
+node_modules
+.DS_Store
+dist

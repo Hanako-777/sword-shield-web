@@ -1,0 +1,72 @@
+spring:
+  jackson:
+    time-zone: ${APP_TIME_ZONE:Asia/Shanghai}
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  mvc:
+    format:
+      date: yyyy-MM-dd
+      time: HH:mm:ss
+      date-time: yyyy-MM-dd'T'HH:mm:ss
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL:jdbc:mysql://localhost:13306/sword_shield?useSSL=false&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:123456}
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+      timeout: ${REDIS_TIMEOUT:2s}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+      config:
+        enabled: ${NACOS_CONFIG_ENABLED:false}
+        import-check:
+          enabled: false
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:localhost:8858}
+      datasource:
+        flow:
+          nacos:
+            server-addr: ${spring.cloud.nacos.discovery.server-addr}
+            data-id: ${spring.application.name}-sentinel-flow
+            group-id: ${SENTINEL_GROUP_ID:SENTINEL_GROUP}
+            data-type: json
+            rule-type: flow
+
+app:
+  http:
+    # Return real HTTP status code according to Response.code (e.g. 400/401/403/429/500),
+    # so that monitoring/alerts can rely on HTTP semantics.
+    use-status-code: true
+
+  security:
+    login:
+      rate-limit:
+        # Per-minute request limit for /api/user/login
+        ip-per-minute: ${LOGIN_RATE_LIMIT_IP_PER_MIN:60}
+        user-per-minute: ${LOGIN_RATE_LIMIT_USER_PER_MIN:20}
+      lock:
+        # Lock on consecutive failures within a window
+        user-max-failures: ${LOGIN_LOCK_USER_MAX_FAILURES:5}
+        user-window-seconds: ${LOGIN_LOCK_USER_WINDOW_SECONDS:900}
+        user-lock-seconds: ${LOGIN_LOCK_USER_LOCK_SECONDS:900}
+        ip-max-failures: ${LOGIN_LOCK_IP_MAX_FAILURES:30}
+        ip-window-seconds: ${LOGIN_LOCK_IP_WINDOW_SECONDS:900}
+        ip-lock-seconds: ${LOGIN_LOCK_IP_LOCK_SECONDS:900}
+
+  cache:
+    # Add random TTL jitter to mitigate cache avalanche (many keys expiring at once).
+    # 0.1 means +0~10% extra TTL per entry.
+    jitter-percent: ${CACHE_JITTER_PERCENT:0.1}
+    # TTL for caching "not found" results (cache penetration protection).
+    negative-ttl: ${CACHE_NEGATIVE_TTL:30s}

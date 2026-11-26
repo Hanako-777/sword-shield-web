@@ -1,0 +1,87 @@
+package com.swordshield.content.controller;
+
+import com.swordshield.common.AuthUtils;
+import com.swordshield.common.PageResult;
+import com.swordshield.common.Response;
+import com.swordshield.content.dto.AdminArticleUpsertRequest;
+import com.swordshield.content.dto.ContentArticleDto;
+import com.swordshield.content.service.ContentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/content/admin/articles")
+@Tag(name = "资讯管理（管理员）", description = "管理员对资讯文章的增删改查")
+public class AdminArticleController {
+    private final ContentService service;
+
+    public AdminArticleController(ContentService service) {
+        this.service = service;
+    }
+
+    @GetMapping
+    @Operation(summary = "资讯列表（管理员）", description = "分页查询全部资讯（包含草稿/已发布），支持按分类与状态过滤")
+    public Response<PageResult<ContentArticleDto>> list(
+            @Parameter(in = ParameterIn.HEADER, name = "Authorization", description = "Bearer {admin_token}", required = true)
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestHeader(name = "X-Auth-Subject", required = false) String subjectHeader,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "status", required = false) Integer status,
+            @RequestParam(name = "excludeCategory", required = false) String excludeCategory) {
+        AuthUtils.requireAdminSubject(subjectHeader, authorization);
+        return Response.ok(service.listAdminArticles(page, size, category, status, excludeCategory));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "资讯详情（管理员）", description = "根据 ID 查询资讯（包含草稿/已发布）")
+    public Response<ContentArticleDto> detail(
+            @Parameter(in = ParameterIn.HEADER, name = "Authorization", description = "Bearer {admin_token}", required = true)
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestHeader(name = "X-Auth-Subject", required = false) String subjectHeader,
+            @PathVariable("id") Long id) {
+        AuthUtils.requireAdminSubject(subjectHeader, authorization);
+        return Response.ok(service.articleDetail(id));
+    }
+
+    @PostMapping
+    @Operation(summary = "创建资讯", description = "管理员创建资讯，可选择草稿/发布")
+    public Response<ContentArticleDto> create(
+            @Parameter(in = ParameterIn.HEADER, name = "Authorization", description = "Bearer {admin_token}", required = true)
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestHeader(name = "X-Auth-Subject", required = false) String subjectHeader,
+            @RequestBody AdminArticleUpsertRequest body) {
+        String subject = AuthUtils.requireAdminSubject(subjectHeader, authorization);
+        return Response.ok(service.createAdminArticle(body, subject));
+    }
+
+    @PutMapping("/{id}")
+    @Operation(summary = "更新资讯", description = "管理员更新资讯内容与发布状态")
+    public Response<ContentArticleDto> update(
+            @Parameter(in = ParameterIn.HEADER, name = "Authorization", description = "Bearer {admin_token}", required = true)
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestHeader(name = "X-Auth-Subject", required = false) String subjectHeader,
+            @PathVariable("id") Long id,
+            @RequestBody AdminArticleUpsertRequest body) {
+        AuthUtils.requireAdminSubject(subjectHeader, authorization);
+        return Response.ok(service.updateAdminArticle(id, body));
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "删除资讯", description = "管理员删除资讯")
+    public Response<Object> delete(
+            @Parameter(in = ParameterIn.HEADER, name = "Authorization", description = "Bearer {admin_token}", required = true)
+            @RequestHeader(name = "Authorization", required = false) String authorization,
+            @RequestHeader(name = "X-Auth-Subject", required = false) String subjectHeader,
+            @PathVariable("id") Long id) {
+        AuthUtils.requireAdminSubject(subjectHeader, authorization);
+        service.deleteAdminArticle(id);
+        return Response.ok(null);
+    }
+}

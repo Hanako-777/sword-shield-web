@@ -1,0 +1,978 @@
+{{- /*
+  Sword Shield 业务服务（gateway/user/activity/content/interaction/file/admin/web-ui）
+  由 k8s/deployments.yaml 迁移而来，做了最小 Helm 模板化：
+  - namespace 使用 .Release.Namespace / .Values.namespace
+  - 镜像从 .Values.image.* 读取
+  其他端口、环境变量保持与原始 YAML 一致
+*/ -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-gateway
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssGateway }}
+  selector:
+    matchLabels:
+      app: ss-gateway
+  template:
+    metadata:
+      labels:
+        app: ss-gateway
+    spec:
+      {{- if .Values.dependencies.enabled }}
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at {{ .Values.dependencies.mysqlHost }}:{{ .Values.dependencies.mysqlPort }}..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.mysqlHost }} {{ .Values.dependencies.mysqlPort }} 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at {{ .Values.dependencies.nacosHost }}:{{ .Values.dependencies.nacosPort }}..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.nacosHost }} {{ .Values.dependencies.nacosPort }} 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      {{- end }}
+      containers:
+        - name: ss-gateway
+          image: {{ .Values.image.ssGateway }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            {{- if eq .Values.observability.tracing.mode "agent" }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: JAVA_AGENT_OPTS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "sword-shield-gateway"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            {{- else }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            {{- end }}
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-gateway
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  type: NodePort
+  selector:
+    app: ss-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      nodePort: 30080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-user
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssUser }}
+  selector:
+    matchLabels:
+      app: ss-user
+  template:
+    metadata:
+      labels:
+        app: ss-user
+    spec:
+      {{- if .Values.dependencies.enabled }}
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at {{ .Values.dependencies.mysqlHost }}:{{ .Values.dependencies.mysqlPort }}..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.mysqlHost }} {{ .Values.dependencies.mysqlPort }} 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at {{ .Values.dependencies.nacosHost }}:{{ .Values.dependencies.nacosPort }}..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.nacosHost }} {{ .Values.dependencies.nacosPort }} 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      {{- end }}
+      containers:
+        - name: ss-user
+          image: {{ .Values.image.ssUser }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8101
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            {{- if eq .Values.observability.tracing.mode "agent" }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: JAVA_AGENT_OPTS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "sword-shield-user"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            {{- else }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            {{- end }}
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8101
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8101
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-user
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  selector:
+    app: ss-user
+  ports:
+    - name: http
+      port: 8101
+      targetPort: 8101
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-activity
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssActivity }}
+  selector:
+    matchLabels:
+      app: ss-activity
+  template:
+    metadata:
+      labels:
+        app: ss-activity
+    spec:
+      {{- if .Values.dependencies.enabled }}
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at {{ .Values.dependencies.mysqlHost }}:{{ .Values.dependencies.mysqlPort }}..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.mysqlHost }} {{ .Values.dependencies.mysqlPort }} 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at {{ .Values.dependencies.nacosHost }}:{{ .Values.dependencies.nacosPort }}..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.nacosHost }} {{ .Values.dependencies.nacosPort }} 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      {{- end }}
+      containers:
+        - name: ss-activity
+          image: {{ .Values.image.ssActivity }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8102
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            {{- if eq .Values.observability.tracing.mode "agent" }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: JAVA_AGENT_OPTS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "sword-shield-activity"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            {{- else }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            {{- end }}
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8102
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8102
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-activity
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  selector:
+    app: ss-activity
+  ports:
+    - name: http
+      port: 8102
+      targetPort: 8102
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-content
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssContent }}
+  selector:
+    matchLabels:
+      app: ss-content
+  template:
+    metadata:
+      labels:
+        app: ss-content
+    spec:
+      {{- if .Values.dependencies.enabled }}
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at {{ .Values.dependencies.mysqlHost }}:{{ .Values.dependencies.mysqlPort }}..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.mysqlHost }} {{ .Values.dependencies.mysqlPort }} 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at {{ .Values.dependencies.nacosHost }}:{{ .Values.dependencies.nacosPort }}..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.nacosHost }} {{ .Values.dependencies.nacosPort }} 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      {{- end }}
+      containers:
+        - name: ss-content
+          image: {{ .Values.image.ssContent }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8103
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            {{- if eq .Values.observability.tracing.mode "agent" }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: JAVA_AGENT_OPTS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "sword-shield-content"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            {{- else }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            {{- end }}
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8103
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8103
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-content
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  selector:
+    app: ss-content
+  ports:
+    - name: http
+      port: 8103
+      targetPort: 8103
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-interaction
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssInteraction }}
+  selector:
+    matchLabels:
+      app: ss-interaction
+  template:
+    metadata:
+      labels:
+        app: ss-interaction
+    spec:
+      {{- if .Values.dependencies.enabled }}
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at {{ .Values.dependencies.mysqlHost }}:{{ .Values.dependencies.mysqlPort }}..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.mysqlHost }} {{ .Values.dependencies.mysqlPort }} 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at {{ .Values.dependencies.nacosHost }}:{{ .Values.dependencies.nacosPort }}..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.nacosHost }} {{ .Values.dependencies.nacosPort }} 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      {{- end }}
+      containers:
+        - name: ss-interaction
+          image: {{ .Values.image.ssInteraction }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8104
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            {{- if eq .Values.observability.tracing.mode "agent" }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: JAVA_AGENT_OPTS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "sword-shield-interaction"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            {{- else }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            {{- end }}
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8104
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8104
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-interaction
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  selector:
+    app: ss-interaction
+  ports:
+    - name: http
+      port: 8104
+      targetPort: 8104
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-file
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssFile }}
+  selector:
+    matchLabels:
+      app: ss-file
+  template:
+    metadata:
+      labels:
+        app: ss-file
+    spec:
+      {{- if .Values.dependencies.enabled }}
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at {{ .Values.dependencies.mysqlHost }}:{{ .Values.dependencies.mysqlPort }}..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.mysqlHost }} {{ .Values.dependencies.mysqlPort }} 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at {{ .Values.dependencies.nacosHost }}:{{ .Values.dependencies.nacosPort }}..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.nacosHost }} {{ .Values.dependencies.nacosPort }} 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      {{- end }}
+      containers:
+        - name: ss-file
+          image: {{ .Values.image.ssFile }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8105
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            {{- if eq .Values.observability.tracing.mode "agent" }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: JAVA_AGENT_OPTS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "sword-shield-file"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            {{- else }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            {{- end }}
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+            - name: MINIO_ENDPOINT
+              value: "http://minio:9000"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8105
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8105
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-file
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  selector:
+    app: ss-file
+  ports:
+    - name: http
+      port: 8105
+      targetPort: 8105
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-admin
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssAdmin }}
+  selector:
+    matchLabels:
+      app: ss-admin
+  template:
+    metadata:
+      labels:
+        app: ss-admin
+    spec:
+      {{- if .Values.dependencies.enabled }}
+      initContainers:
+        - name: wait-dependencies
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "waiting for mysql at {{ .Values.dependencies.mysqlHost }}:{{ .Values.dependencies.mysqlPort }}..."
+              mysql_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.mysqlHost }} {{ .Values.dependencies.mysqlPort }} 2>/dev/null; then
+                  echo "mysql is available"
+                  mysql_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$mysql_ok" -ne 1 ]; then
+                echo "mysql not ready in time"
+                exit 1
+              fi
+
+              echo "waiting for nacos at {{ .Values.dependencies.nacosHost }}:{{ .Values.dependencies.nacosPort }}..."
+              nacos_ok=0
+              for i in $(seq 1 150); do
+                if nc -z {{ .Values.dependencies.nacosHost }} {{ .Values.dependencies.nacosPort }} 2>/dev/null; then
+                  echo "nacos is available"
+                  nacos_ok=1
+                  break
+                fi
+                sleep 2
+              done
+              if [ "$nacos_ok" -ne 1 ]; then
+                echo "nacos not ready in time"
+                exit 1
+              fi
+      {{- end }}
+      containers:
+        - name: ss-admin
+          image: {{ .Values.image.ssAdmin }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8106
+            - containerPort: 20880
+          env:
+            - name: JAVA_OPTS
+              value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=50.0 -Xms256m -Xmx256m"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql:13306/sword_shield?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "123456"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_SENTINEL_TRANSPORT_DASHBOARD
+              value: "sentinel-dashboard:8858"
+            {{- if eq .Values.observability.tracing.mode "agent" }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "false"
+            - name: JAVA_AGENT_OPTS
+              value: "-javaagent:/app/opentelemetry-javaagent.jar"
+            - name: OTEL_SERVICE_NAME
+              value: "sword-shield-admin"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+            - name: OTEL_PROPAGATORS
+              value: "tracecontext,baggage"
+            {{- else }}
+            - name: MANAGEMENT_TRACING_ENABLED
+              value: "true"
+            - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
+              value: "http://otel-collector:4318/v1/traces"
+            {{- end }}
+            - name: LOGSTASH_DESTINATION
+              value: "logstash:5000"
+            - name: DUBBO_PORT
+              value: "20880"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8106
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8106
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-admin
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  selector:
+    app: ss-admin
+  ports:
+    - name: http
+      port: 8106
+      targetPort: 8106
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ss-web-ui
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount.ssWebUi }}
+  selector:
+    matchLabels:
+      app: ss-web-ui
+  template:
+    metadata:
+      labels:
+        app: ss-web-ui
+    spec:
+      containers:
+        - name: ss-web-ui
+          image: {{ .Values.image.ssWebUi }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ss-web-ui
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  type: NodePort
+  selector:
+    app: ss-web-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 30000

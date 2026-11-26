@@ -1,0 +1,96 @@
+server:
+  port: 8080
+  max-http-request-header-size: 10MB
+jwt:
+  secret: ${JWT_SECRET:swordshield-dev-secret-change-me}
+gateway:
+  security:
+    permit-all:
+      - /swagger-ui.html
+      - /swagger-ui/**
+      - /webjars/swagger-ui/**
+      - /v3/api-docs
+      - /v3/api-docs/**
+      - /api/*/v3/api-docs
+      - /api/*/v3/api-docs/**
+      - /api/user/login
+      - /api/user/register
+      - /api/admin/auth/login
+      - /api/activity/list**
+      - /api/activity/detail**
+      - /api/activity/statistics**
+      - /api/content/articles**
+      - /api/content/article**
+      - /api/content/exhibitors**
+      - /api/content/exhibitor**
+      - /api/content/achievements**
+      - /api/content/achievement**
+      - /api/content/material**
+      - /api/content/media**
+      - /api/content/media/**
+      - /api/content/poster**
+      - /api/file/presigned**
+      - /api/interaction/comments**
+      - /api/interaction/likes/count**
+      - /actuator/health**
+      - /actuator/info**
+      - /actuator/prometheus**
+    admin-paths:
+      - /api/admin/**
+      - /api/*/admin/**
+spring:
+  config:
+    import: "classpath:common.yml,classpath:observability.yml"
+  application:
+    name: sword-shield-gateway
+  codec:
+    max-in-memory-size: 50MB
+  cloud:
+    gateway:
+      default-filters: []
+      routes:
+        - id: user
+          uri: lb://sword-shield-user
+          predicates:
+            - Path=/api/user/**
+        - id: activity
+          uri: lb://sword-shield-activity
+          predicates:
+            - Path=/api/activity/**
+        - id: content
+          uri: lb://sword-shield-content
+          predicates:
+            - Path=/api/content/**
+        - id: file
+          uri: lb://sword-shield-file
+          predicates:
+            - Path=/api/file/**
+        - id: interaction
+          uri: lb://sword-shield-interaction
+          predicates:
+            - Path=/api/interaction/**
+        - id: admin
+          uri: lb://sword-shield-admin
+          predicates:
+            - Path=/api/admin/**
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: user
+        url: /api/user/v3/api-docs
+      - name: activity
+        url: /api/activity/v3/api-docs
+      - name: content
+        url: /api/content/v3/api-docs
+      - name: file
+        url: /api/file/v3/api-docs
+      - name: interaction
+        url: /api/interaction/v3/api-docs
+      - name: admin
+        url: /api/admin/v3/api-docs
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway,prometheus

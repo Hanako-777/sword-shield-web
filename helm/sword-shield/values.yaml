@@ -1,0 +1,36 @@
+namespace: sword-shield
+
+image:
+  pullPolicy: IfNotPresent
+  ssGateway: ss-gateway:latest
+  ssUser: ss-user:latest
+  ssActivity: ss-activity:latest
+  ssContent: ss-content:latest
+  ssInteraction: ss-interaction:latest
+  ssFile: ss-file:latest
+  ssAdmin: ss-admin:latest
+  ssWebUi: ss-web-ui:latest
+
+replicaCount:
+  ssGateway: 1
+  ssUser: 1
+  ssActivity: 1
+  ssContent: 1
+  ssInteraction: 1
+  ssFile: 1
+  ssAdmin: 1
+  ssWebUi: 1
+
+dependencies:
+  # 是否在业务服务启动前等待外部依赖服务可用
+  enabled: true
+  mysqlHost: mysql
+  mysqlPort: 13306
+  nacosHost: nacos
+  nacosPort: 8848
+
+observability:
+  tracing:
+    # micrometer: Spring Boot/Micrometer Tracing(默认，使用 management.otlp.tracing.endpoint)
+    # agent: OpenTelemetry Javaagent（会自动设置 MANAGEMENT_TRACING_ENABLED=false，避免重复埋点）
+    mode: micrometer
