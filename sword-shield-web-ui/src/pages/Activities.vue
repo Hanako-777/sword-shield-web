@@ -50,16 +50,19 @@
               v-for="entry in group.items"
               :key="entry.item.id"
               :data-activity-id="entry.item.id"
-              :class="{ 'is-focused': showTimeline && focusedActivityId === entry.item.id }"
+              :class="{ 'is-focused': showTimeline && focusedActivityId === entry.item.id, 'is-live': statusOf(entry.item) === 'live' }"
               :ref="(el) => bindCardEl(entry.item.id, el)"
             >
               <router-link :to="`/activity/${entry.item.id}`" class="event-row ss-row">
                 <img class="event-cover" :src="getCoverImage(entry.item, entry.index)" :alt="entry.item.title" loading="lazy" />
                 <div class="event-text">
                   <div class="event-time">
-                    <span class="ss-dot" :class="dotClass(entry.item)" aria-hidden="true" />
+                    <span v-if="statusOf(entry.item) !== 'live'" class="ss-dot" :class="dotClass(entry.item)" aria-hidden="true" />
                     <span>{{ orderBy === 'heat' ? formatDate(entry.item.startTime) + ' ' : '' }}{{ formatTime(entry.item.startTime) }}</span>
-                    <span v-if="statusOf(entry.item) === 'live'" class="ss-badge ss-badge--live">进行中</span>
+                    <template v-if="statusOf(entry.item) === 'live'">
+                      <span class="live-tag"><i class="live-pulse" aria-hidden="true" />进行中</span>
+                      <span v-if="endLabel(entry.item)" class="live-end">{{ endLabel(entry.item) }}</span>
+                    </template>
                     <span v-else-if="statusOf(entry.item) === 'ended'" class="ss-badge">已结束</span>
                   </div>
                   <h3 class="event-title">{{ entry.item.title }}</h3>
@@ -489,7 +492,18 @@ function statusOf(item: any): 'live' | 'soon' | 'ended' | '' {
 
 function dotClass(item: any) {
   const s = statusOf(item)
-  return s === 'live' ? 'ss-dot--live' : s === 'soon' ? 'ss-dot--soon' : ''
+  return s === 'live' ? 'dot-live' : s === 'soon' ? 'ss-dot--soon' : ''
+}
+
+/** 进行中活动的结束提示：当天结束显示时刻，跨天显示日期 */
+function endLabel(item: any) {
+  if (!item.endTime) return ''
+  const end = new Date(item.endTime)
+  const today = new Date()
+  const sameDay = end.toDateString() === today.toDateString()
+  return sameDay
+    ? `${formatTime(item.endTime)} 结束`
+    : `${end.getMonth() + 1}月${end.getDate()}日结束`
 }
 
 /** 按时间排序时按日期分组（日期标题吸顶）；按热度排序时不分组 */
@@ -957,5 +971,57 @@ onBeforeUnmount(() => {
   .meta-more {
     display: none;
   }
+}
+
+/* ---- 进行中：近黑胶囊 + 红色呼吸点，不再使用青绿 ---- */
+.live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px 2px 8px;
+  border-radius: var(--ss-r-badge);
+  background: var(--ss-ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 18px;
+}
+.live-pulse {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+.live-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid #ef4444;
+  opacity: 0;
+  animation: live-ring 1.8s var(--ss-ease) infinite;
+}
+@keyframes live-ring {
+  0% { transform: scale(0.6); opacity: 0.7; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.live-end {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ss-subtle);
+}
+.dot-live {
+  background: #ef4444;
+}
+.day-list > li.is-live .event-time {
+  color: var(--ss-ink);
+}
+.day-list > li.is-live .event-cover {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ss-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-pulse::after { animation: none; opacity: 0; }
 }
 </style>
